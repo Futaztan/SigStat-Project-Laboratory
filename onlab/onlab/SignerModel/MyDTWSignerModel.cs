@@ -15,6 +15,7 @@ namespace onlab.SignerModel
        
 
         public List<Signature> GenuineSignatures { get; set; }
+        public List<double[][]> GenuineFeatures { get; set; }
 
 
 

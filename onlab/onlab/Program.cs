@@ -1,4 +1,5 @@
 ﻿using onlab.Classifier;
+using onlab.Functions;
 using SigStat.Common;
 using SigStat.Common.Algorithms.Distances;
 using SigStat.Common.Framework.Samplers;
@@ -9,28 +10,40 @@ using SigStat.Common.PipelineItems.Classifiers;
 
 namespace onlab
 {
+
+  
     class Program
     {
+        static List<Result> results = new List<Result>();
+
         static void Main(string[] args)
         {
             //LoadSignaturesExample();
             //UseBenchmarkExample();
-            UseBenchMark();
+            TrainFunctions trainFunctions = new TrainFunctions();
+            TestFunctions testFunctions = new TestFunctions();
+            foreach (var train in trainFunctions.funcs)
+            {
+                foreach (var test in testFunctions.funcs)
+                {
+                    UseBenchMark(train.Method, train.Name, test.Method, test.Name);
+                }
+            }
+            foreach (var result in results)
+            {
+                result.Print();
+            }
+
+
         }
-        private static double testSignatureAVG(List<double> values, double threshold)
+       
+       
+        private static void UseBenchMark(Func<IEnumerable<double>, double> trainFunction, string trainName, Func<List<double>, double, double> testFunction, string testName)
         {
-            if (values.Average() < threshold) return 1;
-            else return 0;
-        }
-        private static double calculateThresholdAVG(IEnumerable<double> values)
-        {
-            return values.Average();
-        }
-        private static void UseBenchMark()
-        {
-            //var path = @"C:\Users\David\Downloads\MCYT100.zip";
-            Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
-            var path = Console.ReadLine();
+            var path = @"C:\Users\David\Downloads\MCYT100.zip";
+           // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
+            //var path = Console.ReadLine();
+     
             var benchmark = new VerifierBenchmark()
             {
                 Loader = new MCYTLoader(path, true),
@@ -43,8 +56,8 @@ namespace onlab
                     {
                         Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.T },
                         DistanceFunction = new EuclideanDistance().Calculate,
-                        TestFunction = testSignatureAVG,
-                        ThresholdFunction = calculateThresholdAVG
+                        TestFunction = testFunction,
+                        ThresholdFunction = trainFunction
                        
 
 
@@ -57,10 +70,14 @@ namespace onlab
             };
             
             BenchmarkResults result = benchmark.Execute(true);
-            Console.WriteLine($"AER: {result.FinalResult.Aer}");
-            Console.WriteLine($"FAR: {result.FinalResult.Far}");
-            Console.WriteLine($"FRR: {result.FinalResult.Frr}");
-            Console.ReadKey();
+            Result res = new Result { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, TrainName = trainName, TestName = testName };
+            results.Add(res);
+            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
+            //Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
+            //Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
+            //Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
+            
+          
         }
 
         private static void UseBenchmarkExample()
