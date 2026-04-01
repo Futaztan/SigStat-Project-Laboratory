@@ -15,6 +15,7 @@ namespace onlab.Functions
             funcs.Add(("Max",calculateThresholdMax));
             funcs.Add(("Szoras",calculateThresholdSzoras));
             funcs.Add(("Median",calculateThresholdMedian));
+            funcs.Add(("Percentilis", calculateThresholdPercentilis));
         }
         public double calculateThresholdAVG(IEnumerable<double> values)
         {
@@ -25,7 +26,7 @@ namespace onlab.Functions
         {
             var sorted = values.OrderBy(v => v).ToList();
             double median = sorted[sorted.Count / 2];
-            return median * 1.5; // Itt nagyobb szorzó kell, mint az átlagnál
+            return median * 1.5;
         }
         public double calculateThresholdSzoras(IEnumerable<double> values)
         {
@@ -33,11 +34,20 @@ namespace onlab.Functions
             double sum = values.Select(v => Math.Pow(v - avg, 2)).Sum();
             double szoras = Math.Sqrt(sum / values.Count());
 
-            return avg + (2 * szoras); // A '2'-es szorzóval érdemes kísérletezni (1.5 - 2.5 között)
+            return avg + (2 * szoras); 
         }
         public double calculateThresholdMax(IEnumerable<double> values)
         {
             return values.Max();
+        }
+
+        //95%os
+        public double calculateThresholdPercentilis(IEnumerable<double> values)
+        {
+            values = values.Order();
+            int which = (int)Math.Floor(values.Count() * 0.95);
+            
+            return values.ElementAt(which);
         }
     }
 }

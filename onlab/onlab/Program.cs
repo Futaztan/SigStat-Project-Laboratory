@@ -1,4 +1,6 @@
-﻿using onlab.Classifier;
+﻿using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using onlab.Classifier;
 using onlab.Functions;
 using SigStat.Common;
 using SigStat.Common.Algorithms.Distances;
@@ -6,8 +8,11 @@ using SigStat.Common.Framework.Samplers;
 using SigStat.Common.Loaders;
 using SigStat.Common.Logging;
 using SigStat.Common.Model;
+using SigStat.Common.Pipeline;
 using SigStat.Common.PipelineItems.Classifiers;
-
+using SigStat.Common.PipelineItems.Transforms.Preprocessing;
+using System.ComponentModel;
+using System.Drawing;
 namespace onlab
 {
 
@@ -18,8 +23,151 @@ namespace onlab
 
         static void Main(string[] args)
         {
+            TrainFunctions trainFunctions = new TrainFunctions();
+            TestFunctions testFunctions = new TestFunctions();
+            MixFunctions mixFunctions = new MixFunctions();
             //LoadSignaturesExample();
             //UseBenchmarkExample();
+
+            // UseBenchMark(trainFunctions.funcs[0].Method, trainFunctions.funcs[0].Name, testFunctions.funcs[0].Method, testFunctions.funcs[0].Name);
+            TestAll();
+            PrintToExcel();
+           
+
+
+        }
+
+        private static void PrintToExcel()
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("asdasdasda");
+
+
+            var excel = new ExcelPackage();
+            var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
+            
+
+            workSheet.Row(1).Height = 20;
+            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            workSheet.Row(1).Style.Font.Bold = true;
+            
+            workSheet.Cells[1, 1].Value = "Train Name";
+            workSheet.Cells[1, 2].Value = "Test Name";
+            workSheet.Cells[1, 3].Value = "AER";
+            workSheet.Cells[1, 4].Value = "FAR";
+            workSheet.Cells[1, 5].Value = "FRR";
+            
+
+            results = results.OrderBy(o => o.TrainName).ThenBy(o => o.TestName).ToList();     
+            int row = 2;
+        
+            foreach (var result in results)
+            {
+                for (int i = 1; i <= 5; i++) 
+                {
+                    workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
+                }
+                workSheet.Cells[row, 1].Value = result.TrainName;
+                workSheet.Cells[row, 2].Value = result.TestName;
+                workSheet.Cells[row, 3].Value = result.AER;
+                workSheet.Cells[row, 4].Value = result.FAR;
+                workSheet.Cells[row, 5].Value = result.FRR;
+                row++;
+
+            }
+
+            workSheet = excel.Workbook.Worksheets.Add("AER");
+
+            workSheet.Row(1).Height = 20;
+            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            workSheet.Row(1).Style.Font.Bold = true;
+            string prev = "";
+            row = 1;
+            int col = 2;
+            foreach (var result in results)
+            {
+                if(!result.TrainName.Equals(prev))
+                {
+                    row++;
+                    col = 2;
+                    workSheet.Cells[row, 1].Value = result.TrainName;
+                    prev = result.TrainName;
+                }
+                
+                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[row, col].Value = result.AER;
+                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
+                col++;
+            }
+
+            workSheet = excel.Workbook.Worksheets.Add("FAR");
+            workSheet.Row(1).Height = 20;
+            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            workSheet.Row(1).Style.Font.Bold = true;
+            prev = "";
+            row = 1;
+            col = 2;
+            foreach (var result in results)
+            {
+                if (!result.TrainName.Equals(prev))
+                {
+                    row++;
+                    col = 2;
+                    workSheet.Cells[row, 1].Value = result.TrainName;
+                    prev = result.TrainName;
+                }
+
+                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[row, col].Value = result.FAR;
+                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
+                col++;
+            }
+
+
+            workSheet = excel.Workbook.Worksheets.Add("FRR");
+
+            workSheet.Row(1).Height = 20;
+            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            workSheet.Row(1).Style.Font.Bold = true;
+            prev = "";
+            row = 1;
+            col = 2;
+            foreach (var result in results)
+            {
+                if (!result.TrainName.Equals(prev))
+                {
+                    row++;
+                    col = 2;
+                    workSheet.Cells[row, 1].Value = result.TrainName;
+                    prev = result.TrainName;
+                }
+
+                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[row, col].Value = result.FRR;
+                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
+                col++;
+            }
+
+
+
+
+            string path = @"C:\Users\David\Downloads\bme.xlsx";
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            FileStream objFileStrm = File.Create(path);
+            objFileStrm.Close();
+
+          
+            File.WriteAllBytes(path, excel.GetAsByteArray());
+           
+            excel.Dispose();
+        }
+   
+
+       
+        private static void TestAll()
+        {
             TrainFunctions trainFunctions = new TrainFunctions();
             TestFunctions testFunctions = new TestFunctions();
             foreach (var train in trainFunctions.funcs)
@@ -33,8 +181,15 @@ namespace onlab
             {
                 result.Print();
             }
-
-
+            results = results.OrderBy(o => o.AER).ToList();
+            Console.WriteLine("Legjobb AER: ");
+            results[0].Print();
+            Console.WriteLine("Legjobb FAR aztán FRR: ");
+            results = results.OrderBy(o => o.FAR).ThenBy(o => o.FRR).ToList();
+            results[0].Print();
+            Console.WriteLine("Legjobb FRR aztán FAR: ");
+            results = results.OrderBy(o => o.FRR).ThenBy(o => o.FAR).ToList();
+            results[0].Print();
         }
        
        
@@ -52,10 +207,19 @@ namespace onlab
 
                 Verifier = new Verifier()
                 {
+                    Pipeline = new SequentialTransformPipeline
+                    {
+                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
+                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
+                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
+                    },
                     Classifier = new MyDTWClassifier()
                     {
-                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.T },
-                        DistanceFunction = new EuclideanDistance().Calculate,
+
+
+                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure },
+                        //DistanceFunction = new EuclideanDistance().Calculate,
+                        DistanceFunction = new ManhattanDistance().Calculate,
                         TestFunction = testFunction,
                         ThresholdFunction = trainFunction
                        
@@ -66,7 +230,7 @@ namespace onlab
                     Logger = new SimpleConsoleLogger()
 
                 },
-                Sampler = new FirstNSampler()
+                Sampler = new OddNSampler(10)
             };
             
             BenchmarkResults result = benchmark.Execute(true);
@@ -126,7 +290,12 @@ namespace onlab
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
             MCYTLoader loader = new MCYTLoader(path, true);
             var signers = new List<Signer>(loader.EnumerateSigners());
+        
             var signaturesOfUser1 = signers[0].Signatures;
+            for (int i = 0; i < signers.Count; i++)
+            {
+                Console.WriteLine(signers[i].Signatures.Count);
+            }
             var signature = signaturesOfUser1[0];
 
             Console.WriteLine($"A(z) {signature.Signer.ID}. aláíró {signature.ID}. aláírása:");
