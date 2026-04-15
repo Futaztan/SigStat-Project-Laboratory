@@ -6,16 +6,16 @@ namespace onlab.Functions
 {
     public class TestFunctions
     {
-        public List<(string Name, Func<List<double>, double, double> Method)> funcs = new List<(string Name, Func<List<double>, double, double> Method)>();
+        public List<(TestFunctionName Name, Func<List<double>, double, double> Method)> funcs = new List<(TestFunctionName Name, Func<List<double>, double, double> Method)>();
 
         public TestFunctions()
         {
-            funcs.Add(("K nearest",testSignatureKNearest));
-            funcs.Add(("K farest", testSignatureKFarest));
-            funcs.Add(("Probability",testSignatureProbability));
-            funcs.Add(("Average",testSignaturesAVG));
-            funcs.Add(("Min",testSignaturesMIN));
-            funcs.Add(("Voting",testSignatureVoting));
+            funcs.Add((TestFunctionName.K_nearest, testSignatureKNearest));
+            funcs.Add((TestFunctionName.K_farest, testSignatureKFarest));
+            funcs.Add((TestFunctionName.Probability, testSignatureProbability));
+            funcs.Add((TestFunctionName.Average, testSignaturesAVG));
+            funcs.Add((TestFunctionName.Min, testSignaturesMIN));
+            funcs.Add((TestFunctionName.Voting, testSignatureVoting));
         }
         
         public double testSignaturesAVG(List<double> values, double threshold)

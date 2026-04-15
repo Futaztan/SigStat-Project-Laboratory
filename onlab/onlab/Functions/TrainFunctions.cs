@@ -7,15 +7,15 @@ namespace onlab.Functions
 {
     public class TrainFunctions
     {
-        public List<(string Name, Func<IEnumerable<double>, double> Method)> funcs = new List<(string Name, Func<IEnumerable<double> , double> Method)>();
+        public List<(TrainFunctionName Name, Func<IEnumerable<double>, double> Method)> funcs = new List<(TrainFunctionName Name, Func<IEnumerable<double> , double> Method)>();
 
         public TrainFunctions()
         {
-            funcs.Add(("Average",calculateThresholdAVG));
-            funcs.Add(("Max",calculateThresholdMax));
-            funcs.Add(("Szoras",calculateThresholdSzoras));
-            funcs.Add(("Median",calculateThresholdMedian));
-            funcs.Add(("Percentilis", calculateThresholdPercentilis));
+            funcs.Add((TrainFunctionName.Average,calculateThresholdAVG));
+            funcs.Add((TrainFunctionName.Max, calculateThresholdMax));
+            funcs.Add((TrainFunctionName.Szórás, calculateThresholdSzoras));
+            funcs.Add((TrainFunctionName.Medián, calculateThresholdMedian));
+            funcs.Add((TrainFunctionName.Percentilis, calculateThresholdPercentilis));
         }
         public double calculateThresholdAVG(IEnumerable<double> values)
         {

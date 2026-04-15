@@ -1,9 +1,7 @@
-﻿
-using Accord.Math;
+﻿using onlab.Functions;
 using onlab.SignerModel;
 using SigStat.Common;
 using SigStat.Common.Algorithms;
-using SigStat.Common.Helpers.Serialization;
 using SigStat.Common.Pipeline;
 using System;
 using System.Collections.Concurrent;
@@ -12,95 +10,92 @@ using System.Text;
 
 namespace onlab.Classifier
 {
-    internal class MyDTWClassifier : IClassifier
+    public class MultipleDTWClassifier : IClassifier
     {
-
         public required List<FeatureDescriptor> Features { get; set; }
+        private List<FunctionPair> results = new List<FunctionPair>();
+        
         public static readonly ConcurrentDictionary<(string, string), double> DistanceCache = new();
 
         private double GetCachedDtw(Signature s1, Signature s2, double[][] f1, double[][] f2)
         {
-            
+
             var key = string.Compare(s1.ID, s2.ID) < 0 ? (s1.ID, s2.ID) : (s2.ID, s1.ID);
 
             return DistanceCache.GetOrAdd(key, _ =>
                 DtwImplementations.ExactDtwWikipedia(f1, f2, DistanceFunction));
         }
 
-
-        public required Func<IEnumerable<double>, double> ThresholdFunction { get; set; }
-        public required Func<List<double>, double, double> TestFunction { get; set; }
+        public required List<(TrainFunctionName Name, Func<IEnumerable<double>, double> Method)> ThresholdFunctions { get; set; }
+        public required List<(TestFunctionName Name, Func<List<double>, double, double> Method)> TestFunctions { get; set; }
+        public required Func<List<FunctionPair>, double> DecideFunction { get; set; }
 
         public required Func<double[], double[], double> DistanceFunction { get; set; }
         double IClassifier.Test(ISignerModel model, Signature signature)
         {
-            Console.WriteLine("TEST");
-            MyDTWSignerModel m = (MyDTWSignerModel)model;
+            MultipleDTWSignerModel m = (MultipleDTWSignerModel)model;
             List<double> values = new List<double>();
-           
+
             double[][] signFeature = signature.GetAggregateFeature(Features).ToArray();
-            for(int i = 0; i< m.GenuineSignatures.Count; i++)
+            for (int i = 0; i < m.GenuineSignatures.Count; i++)
             {
-               // double dist = DtwImplementations.ExactDtwWikipedia(genFeature, signFeature, DistanceFunction);
-               double dist = GetCachedDtw(m.GenuineSignatures[i], signature, m.GenuineFeatures[i], signFeature);
+                // double dist = DtwImplementations.ExactDtwWikipedia(genFeature, signFeature, DistanceFunction);
+                double dist = GetCachedDtw(m.GenuineSignatures[i], signature, m.GenuineFeatures[i], signFeature);
                 values.Add(dist);
             }
-            double probability = TestFunction(values, m.Threshold);
-            return probability;
-            //Console.WriteLine("ATLAG: " + values.Average() + " TRHESHOLD: "+ m.Threshold +"\t"+ (values.Average()<m.Threshold));
+            List<FunctionPair> results = new List<FunctionPair>();
+            foreach (var trainResult in m.TrainResults)
+            {
+                foreach (var testFunction in TestFunctions)
+                {
+                    double probability = testFunction.Method(values, trainResult.Threshold);
+                    results.Add(new FunctionPair
+                    {
+                        TrainFunction = trainResult.TrainFunction,
+                        Threshold = trainResult.Threshold,
+                        Probability = probability,
+                        TestFunction = testFunction.Name
+                    });
+                }
+                
+            }
 
-
+            return DecideFunction(results);
 
         }
 
         ISignerModel IClassifier.Train(List<Signature> signatures)
         {
-            Console.WriteLine("TRAIN");
-          
             List<Signature> validSignatures = signatures.FindAll(s => s.Origin == Origin.Genuine);
-            //List<Signature> invalidSignatures = signatures.FindAll(s => s.Origin == Origin.Forged);
             List<double[][]> validFeatures = validSignatures.Select(s => s.GetAggregateFeature(Features).ToArray()).ToList();
-            //List<double[][]> invalidFeatures = invalidSignatures.Select(s => s.GetAggregateFeature(Features).ToArray()).ToList();
-    
+
             // DistanceMatrix<string, string, double> distanceMatrix = new DistanceMatrix<string, string, double>();
             List<double> distancesBetweenValid = new List<double>();
-           // List<double> distancesBetweenInvalid = new List<double>();
 
             for (int i = 0; i < validFeatures.Count; i++)
             {
                 for (int j = i + 1; j < validFeatures.Count; j++)
                 {
-                    
-                    //double dist = DtwImplementations.ExactDtwWikipedia(extractedFeatures[i],extractedFeatures[j],DistanceFunction);
                     double dist = GetCachedDtw(validSignatures[i], validSignatures[j], validFeatures[i], validFeatures[j]);
                     distancesBetweenValid.Add(dist);
                 }
-
             }
+            List<FunctionPair> trainResults = new List<FunctionPair>();
+            foreach (var ThresholdFunction in ThresholdFunctions)
+            {
+                double tr = ThresholdFunction.Method(distancesBetweenValid);
+                trainResults.Add(new FunctionPair { TrainFunction = ThresholdFunction.Name, Threshold = tr });
+            }
+           
+           
 
-            //for(int i = 0; i < validFeatures.Count; i++)
-            //{
-            //    for (int j = i + 1; j < invalidFeatures.Count; j++)
-            //    {
-            //        //double dist = DtwImplementations.ExactDtwWikipedia(extractedFeatures[i],extractedFeatures[j],DistanceFunction);
-            //        double dist = GetCachedDtw(validSignatures[i], invalidSignatures[j], validFeatures[i], invalidFeatures[j]);
-            //        distancesBetweenInvalid.Add(dist);
-            //    }
-            //}
-
-            double tr = ThresholdFunction(distancesBetweenValid);
-
-            MyDTWSignerModel model = new MyDTWSignerModel
+            MultipleDTWSignerModel model = new MultipleDTWSignerModel
             {
                 SignerID = signatures[0].Signer.ID,
                 GenuineSignatures = validSignatures,
                 GenuineFeatures = validFeatures,
-                Threshold = tr
-
-
-
+                TrainResults = trainResults
             };
-    
             return model;
 
         }

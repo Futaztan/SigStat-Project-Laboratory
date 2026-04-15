@@ -20,20 +20,78 @@ namespace onlab
     class Program
     {
         static List<Result> results = new List<Result>();
+        static TrainFunctions trainFunctions = new TrainFunctions();
+        static TestFunctions testFunctions = new TestFunctions();
 
         static void Main(string[] args)
         {
-            TrainFunctions trainFunctions = new TrainFunctions();
-            TestFunctions testFunctions = new TestFunctions();
+   
             MixFunctions mixFunctions = new MixFunctions();
             //LoadSignaturesExample();
             //UseBenchmarkExample();
 
-            // UseBenchMark(trainFunctions.funcs[0].Method, trainFunctions.funcs[0].Name, testFunctions.funcs[0].Method, testFunctions.funcs[0].Name);
-            TestAll();
-            PrintToExcel();
-           
+            //UseBenchMark(trainFunctions.funcs[0], testFunctions.funcs[0]);
+            //TestAll();
+            //PrintToExcel();
+            UseMultipleClassifier();
 
+            
+
+
+        }
+        public static double Decide(List<FunctionPair> functionPairs)
+        {
+          
+            return functionPairs.Average(f => f.Probability);
+        }
+        private static void UseMultipleClassifier()
+        {
+            var path = @"C:\Users\David\Downloads\MCYT100.zip";
+            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
+            //var path = Console.ReadLine();
+
+            var benchmark = new VerifierBenchmark()
+            {
+                Loader = new MCYTLoader(path, true),
+                Logger = new SimpleConsoleLogger(),
+
+
+                Verifier = new Verifier()
+                {
+                    Pipeline = new SequentialTransformPipeline
+                    {
+                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
+                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
+                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
+                    },
+                    Classifier = new MultipleDTWClassifier()
+                    {
+
+
+                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure },
+                        //DistanceFunction = new EuclideanDistance().Calculate,
+                        DistanceFunction = new ManhattanDistance().Calculate,
+                        DecideFunction = Decide,
+                        TestFunctions = testFunctions.funcs,
+                        ThresholdFunctions = trainFunctions.funcs
+
+
+
+
+                    },
+                    Logger = new SimpleConsoleLogger()
+
+                },
+                Sampler = new OddNSampler(10)
+            };
+
+            BenchmarkResults result = benchmark.Execute(true);
+           
+            //
+            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
+            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
+            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
+            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
 
         }
 
@@ -174,7 +232,7 @@ namespace onlab
             {
                 foreach (var test in testFunctions.funcs)
                 {
-                    UseBenchMark(train.Method, train.Name, test.Method, test.Name);
+                    UseBenchMark(train, test);
                 }
             }
             foreach (var result in results)
@@ -193,8 +251,12 @@ namespace onlab
         }
        
        
-        private static void UseBenchMark(Func<IEnumerable<double>, double> trainFunction, string trainName, Func<List<double>, double, double> testFunction, string testName)
+        private static void UseBenchMark((TrainFunctionName Name, Func<IEnumerable<double>, double> Method) train, (TestFunctionName Name, Func<List<double>, double, double> method) test)
         {
+            Func<IEnumerable<double>, double> trainFunction = train.Method;
+            string trainName = train.Name.ToString();
+            Func<List<double>, double, double> testFunction = test.method;
+            string testName = test.Name.ToString();
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
             //var path = Console.ReadLine();
@@ -236,12 +298,12 @@ namespace onlab
             BenchmarkResults result = benchmark.Execute(true);
             Result res = new Result { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, TrainName = trainName, TestName = testName };
             results.Add(res);
-            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
-            //Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
-            //Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
-            //Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
-            
-          
+            Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
+            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
+            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
+            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
+
+
         }
 
         private static void UseBenchmarkExample()
