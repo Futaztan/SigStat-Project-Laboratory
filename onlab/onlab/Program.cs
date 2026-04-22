@@ -2,6 +2,7 @@
 using OfficeOpenXml.Style;
 using onlab.Classifier;
 using onlab.Functions;
+using onlab.Functions.Enums;
 using SigStat.Common;
 using SigStat.Common.Algorithms.Distances;
 using SigStat.Common.Framework.Samplers;
@@ -16,35 +17,79 @@ using System.Drawing;
 namespace onlab
 {
 
-  
+
     class Program
     {
         static List<Result> results = new List<Result>();
+        
         static TrainFunctions trainFunctions = new TrainFunctions();
         static TestFunctions testFunctions = new TestFunctions();
 
         static void Main(string[] args)
         {
-   
-            MixFunctions mixFunctions = new MixFunctions();
+
+
             //LoadSignaturesExample();
             //UseBenchmarkExample();
 
             //UseBenchMark(trainFunctions.funcs[0], testFunctions.funcs[0]);
-            //TestAll();
+            //TestAllMethod();
             //PrintToExcel();
-            UseMultipleClassifier();
+            DecideFunctions decideFunctions = new DecideFunctions();
+            List<DecideResult> decideResults = new List<DecideResult>();
+            foreach (var decide in decideFunctions.DecideFunctionList)
+            {
+                decideResults.Add(UseMultipleClassifier(decide));
+            }
+            PrintDecideToExcel(decideResults);
 
-            
+
 
 
         }
-        public static double Decide(List<FunctionPair> functionPairs)
+        private static void PrintDecideToExcel(List<DecideResult> results)
         {
-          
-            return functionPairs.Average(f => f.Probability);
+            results = results.OrderBy(r => r.DecideName).ToList();
+            ExcelPackage.License.SetNonCommercialPersonal("onlab");
+            var excel = new ExcelPackage();
+            var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
+
+            workSheet.Row(1).Height = 20;
+            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            workSheet.Row(1).Style.Font.Bold = true;
+            workSheet.Cells[1, 1].Value = "Decide Name";
+            workSheet.Cells[1, 2].Value = "AER";
+            workSheet.Cells[1, 3].Value = "FAR";
+            workSheet.Cells[1, 4].Value = "FRR";
+            int row = 2;
+            foreach (var result in results)
+            {
+                for (int i = 1; i <= 4; i++)
+                {
+                    workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
+                }
+                workSheet.Cells[row, 1].Value = result.DecideName;
+                workSheet.Cells[row, 2].Value = result.AER;
+                workSheet.Cells[row, 3].Value = result.FAR;
+                workSheet.Cells[row, 4].Value = result.FRR;
+                row++;
+
+            }
+
+            string path = @"C:\Users\David\Downloads\bme_decide.xlsx";
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            FileStream objFileStrm = File.Create(path);
+            objFileStrm.Close();
+
+
+            File.WriteAllBytes(path, excel.GetAsByteArray());
+
+            excel.Dispose();
         }
-        private static void UseMultipleClassifier()
+        private static DecideResult UseMultipleClassifier(DecideFunctionDescriptor decide)
         {
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
             // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
@@ -71,9 +116,9 @@ namespace onlab
                         Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure },
                         //DistanceFunction = new EuclideanDistance().Calculate,
                         DistanceFunction = new ManhattanDistance().Calculate,
-                        DecideFunction = Decide,
-                        TestFunctions = testFunctions.funcs,
-                        ThresholdFunctions = trainFunctions.funcs
+                        DecideFunction = decide,
+                        TestFunctions = testFunctions.TestFunctionList,
+                        ThresholdFunction = new TrainFunctionDescriptor { Name = TrainFunctionName.Medián, Method = trainFunctions.calculateThresholdMedian }
 
 
 
@@ -86,41 +131,42 @@ namespace onlab
             };
 
             BenchmarkResults result = benchmark.Execute(true);
-           
-            //
+
+            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name };
+
             //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
             Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
             Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
             Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
-
+            return res;
         }
 
         private static void PrintToExcel()
         {
-            ExcelPackage.License.SetNonCommercialPersonal("asdasdasda");
+            ExcelPackage.License.SetNonCommercialPersonal("onlab");
 
 
             var excel = new ExcelPackage();
             var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
-            
+
 
             workSheet.Row(1).Height = 20;
             workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             workSheet.Row(1).Style.Font.Bold = true;
-            
+
             workSheet.Cells[1, 1].Value = "Train Name";
             workSheet.Cells[1, 2].Value = "Test Name";
             workSheet.Cells[1, 3].Value = "AER";
             workSheet.Cells[1, 4].Value = "FAR";
             workSheet.Cells[1, 5].Value = "FRR";
-            
 
-            results = results.OrderBy(o => o.TrainName).ThenBy(o => o.TestName).ToList();     
+
+            results = results.OrderBy(o => o.TrainName).ThenBy(o => o.TestName).ToList();
             int row = 2;
-        
+
             foreach (var result in results)
             {
-                for (int i = 1; i <= 5; i++) 
+                for (int i = 1; i <= 5; i++)
                 {
                     workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
                 }
@@ -143,14 +189,14 @@ namespace onlab
             int col = 2;
             foreach (var result in results)
             {
-                if(!result.TrainName.Equals(prev))
+                if (!result.TrainName.Equals(prev))
                 {
                     row++;
                     col = 2;
                     workSheet.Cells[row, 1].Value = result.TrainName;
                     prev = result.TrainName;
                 }
-                
+
                 workSheet.Cells[1, col].Value = result.TestName;
                 workSheet.Cells[row, col].Value = result.AER;
                 workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
@@ -216,21 +262,21 @@ namespace onlab
             FileStream objFileStrm = File.Create(path);
             objFileStrm.Close();
 
-          
+
             File.WriteAllBytes(path, excel.GetAsByteArray());
-           
+
             excel.Dispose();
         }
-   
 
-       
-        private static void TestAll()
+
+
+        private static void TestAllMethod()
         {
             TrainFunctions trainFunctions = new TrainFunctions();
             TestFunctions testFunctions = new TestFunctions();
-            foreach (var train in trainFunctions.funcs)
+            foreach (var train in trainFunctions.TrainFunctionList)
             {
-                foreach (var test in testFunctions.funcs)
+                foreach (var test in testFunctions.TestFunctionList)
                 {
                     UseBenchMark(train, test);
                 }
@@ -249,18 +295,18 @@ namespace onlab
             results = results.OrderBy(o => o.FRR).ThenBy(o => o.FAR).ToList();
             results[0].Print();
         }
-       
-       
-        private static void UseBenchMark((TrainFunctionName Name, Func<IEnumerable<double>, double> Method) train, (TestFunctionName Name, Func<List<double>, double, double> method) test)
+
+
+        private static void UseBenchMark(TrainFunctionDescriptor train, TestFunctionDescriptor test)
         {
             Func<IEnumerable<double>, double> trainFunction = train.Method;
             string trainName = train.Name.ToString();
-            Func<List<double>, double, double> testFunction = test.method;
+            Func<List<double>, double, double> testFunction = test.Method;
             string testName = test.Name.ToString();
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
-           // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
+            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
             //var path = Console.ReadLine();
-     
+
             var benchmark = new VerifierBenchmark()
             {
                 Loader = new MCYTLoader(path, true),
@@ -284,7 +330,7 @@ namespace onlab
                         DistanceFunction = new ManhattanDistance().Calculate,
                         TestFunction = testFunction,
                         ThresholdFunction = trainFunction
-                       
+
 
 
 
@@ -294,7 +340,7 @@ namespace onlab
                 },
                 Sampler = new OddNSampler(10)
             };
-            
+
             BenchmarkResults result = benchmark.Execute(true);
             Result res = new Result { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, TrainName = trainName, TestName = testName };
             results.Add(res);
@@ -308,7 +354,7 @@ namespace onlab
 
         private static void UseBenchmarkExample()
         {
-           // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
+            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
             // var path = Console.ReadLine();
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
 
@@ -321,12 +367,12 @@ namespace onlab
 
                 Verifier = new Verifier()
                 {
-                    Classifier = new DtwClassifier() 
+                    Classifier = new DtwClassifier()
                     {
                         Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.T },
                         //DistanceFunction = new EuclideanDistance().Calculate,
                         Logger = new SimpleConsoleLogger()
-                     
+
 
 
                     },
@@ -337,7 +383,7 @@ namespace onlab
             };
             Console.WriteLine("aab");
             BenchmarkResults result = benchmark.Execute(true);
-            
+
             Console.WriteLine("bb");
             Console.WriteLine($"AER: {result.FinalResult.Aer}");
             Console.WriteLine($"FAR: {result.FinalResult.Far}");
@@ -347,12 +393,12 @@ namespace onlab
 
         private static void LoadSignaturesExample()
         {
-           // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
+            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
             //var path = Console.ReadLine();
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
             MCYTLoader loader = new MCYTLoader(path, true);
             var signers = new List<Signer>(loader.EnumerateSigners());
-        
+
             var signaturesOfUser1 = signers[0].Signatures;
             for (int i = 0; i < signers.Count; i++)
             {

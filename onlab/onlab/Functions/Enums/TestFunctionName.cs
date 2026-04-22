@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace onlab
+namespace onlab.Functions.Enums
 {
     public enum TestFunctionName
     {

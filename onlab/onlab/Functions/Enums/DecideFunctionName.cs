@@ -4,12 +4,14 @@ using System.Text;
 
 namespace onlab
 {
-    public enum TrainFunctionName
+    public enum DecideFunctionName
     {
         Average,
-        Max,
-        Szórás,
-        Medián,
-        Percentilis
+        Maximum,
+        Minimum,
+        Voting,
+        Median,
+        TopK
+     
     }
 }

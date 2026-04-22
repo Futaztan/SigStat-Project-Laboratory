@@ -1,4 +1,5 @@
-﻿using System;
+﻿using onlab.Functions.Enums;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using static OfficeOpenXml.ExcelErrorValue;
@@ -7,17 +8,18 @@ namespace onlab.Functions
 {
     public class TrainFunctions
     {
-        public List<(TrainFunctionName Name, Func<IEnumerable<double>, double> Method)> funcs = new List<(TrainFunctionName Name, Func<IEnumerable<double> , double> Method)>();
+        public List<TrainFunctionDescriptor> TrainFunctionList { get; } = new List<TrainFunctionDescriptor>();
 
         public TrainFunctions()
         {
-            funcs.Add((TrainFunctionName.Average,calculateThresholdAVG));
-            funcs.Add((TrainFunctionName.Max, calculateThresholdMax));
-            funcs.Add((TrainFunctionName.Szórás, calculateThresholdSzoras));
-            funcs.Add((TrainFunctionName.Medián, calculateThresholdMedian));
-            funcs.Add((TrainFunctionName.Percentilis, calculateThresholdPercentilis));
+
+            TrainFunctionList.Add(new TrainFunctionDescriptor { Name = TrainFunctionName.Average, Method = calculateThresholdAVG });
+            TrainFunctionList.Add(new TrainFunctionDescriptor { Name = TrainFunctionName.Max, Method = calculateThresholdMax });
+            TrainFunctionList.Add(new TrainFunctionDescriptor { Name = TrainFunctionName.Szórás, Method = calculateThresholdSzoras });
+            TrainFunctionList.Add(new TrainFunctionDescriptor { Name = TrainFunctionName.Medián, Method = calculateThresholdMedian });
+            TrainFunctionList.Add(new TrainFunctionDescriptor { Name = TrainFunctionName.Percentilis, Method = calculateThresholdPercentilis });
         }
-        public double calculateThresholdAVG(IEnumerable<double> values)
+        private double calculateThresholdAVG(IEnumerable<double> values)
         {
             return values.Average() * 1.1;
         }
@@ -28,7 +30,7 @@ namespace onlab.Functions
             double median = sorted[sorted.Count / 2];
             return median * 1.5;
         }
-        public double calculateThresholdSzoras(IEnumerable<double> values)
+        private double calculateThresholdSzoras(IEnumerable<double> values)
         {
             double avg = values.Average();
             double sum = values.Select(v => Math.Pow(v - avg, 2)).Sum();
@@ -36,13 +38,13 @@ namespace onlab.Functions
 
             return avg + (2 * szoras); 
         }
-        public double calculateThresholdMax(IEnumerable<double> values)
+        private double calculateThresholdMax(IEnumerable<double> values)
         {
             return values.Max();
         }
 
         //95%os
-        public double calculateThresholdPercentilis(IEnumerable<double> values)
+        private double calculateThresholdPercentilis(IEnumerable<double> values)
         {
             values = values.Order();
             int which = (int)Math.Floor(values.Count() * 0.95);

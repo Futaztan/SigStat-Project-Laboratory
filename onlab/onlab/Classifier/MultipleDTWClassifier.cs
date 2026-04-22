@@ -26,9 +26,9 @@ namespace onlab.Classifier
                 DtwImplementations.ExactDtwWikipedia(f1, f2, DistanceFunction));
         }
 
-        public required List<(TrainFunctionName Name, Func<IEnumerable<double>, double> Method)> ThresholdFunctions { get; set; }
-        public required List<(TestFunctionName Name, Func<List<double>, double, double> Method)> TestFunctions { get; set; }
-        public required Func<List<FunctionPair>, double> DecideFunction { get; set; }
+        public required TrainFunctionDescriptor ThresholdFunction { get; set; }
+        public required List<TestFunctionDescriptor> TestFunctions { get; set; }
+        public required DecideFunctionDescriptor DecideFunction { get; set; }
 
         public required Func<double[], double[], double> DistanceFunction { get; set; }
         double IClassifier.Test(ISignerModel model, Signature signature)
@@ -44,23 +44,22 @@ namespace onlab.Classifier
                 values.Add(dist);
             }
             List<FunctionPair> results = new List<FunctionPair>();
-            foreach (var trainResult in m.TrainResults)
-            {
+            
                 foreach (var testFunction in TestFunctions)
                 {
-                    double probability = testFunction.Method(values, trainResult.Threshold);
+                    double probability = testFunction.Method(values, m.Threshold);
                     results.Add(new FunctionPair
                     {
-                        TrainFunction = trainResult.TrainFunction,
-                        Threshold = trainResult.Threshold,
+                        TrainFunction = ThresholdFunction.Method,
+                        Threshold = m.Threshold,
                         Probability = probability,
-                        TestFunction = testFunction.Name
+                        TestFunction = testFunction.Method
                     });
                 }
                 
-            }
+            
 
-            return DecideFunction(results);
+            return DecideFunction.Method(results);
 
         }
 
@@ -80,13 +79,13 @@ namespace onlab.Classifier
                     distancesBetweenValid.Add(dist);
                 }
             }
-            List<FunctionPair> trainResults = new List<FunctionPair>();
-            foreach (var ThresholdFunction in ThresholdFunctions)
-            {
-                double tr = ThresholdFunction.Method(distancesBetweenValid);
-                trainResults.Add(new FunctionPair { TrainFunction = ThresholdFunction.Name, Threshold = tr });
-            }
-           
+           // List<FunctionPair> trainResults = new List<FunctionPair>();
+            /* foreach (var ThresholdFunction in ThresholdFunctions)
+             {
+                 double tr = ThresholdFunction.Method(distancesBetweenValid);
+                 trainResults.Add(new FunctionPair { TrainFunction = ThresholdFunction.Name, Threshold = tr });
+             }*/
+            double tr = ThresholdFunction.Method(distancesBetweenValid);
            
 
             MultipleDTWSignerModel model = new MultipleDTWSignerModel
@@ -94,7 +93,7 @@ namespace onlab.Classifier
                 SignerID = signatures[0].Signer.ID,
                 GenuineSignatures = validSignatures,
                 GenuineFeatures = validFeatures,
-                TrainResults = trainResults
+                Threshold = tr
             };
             return model;
 
