@@ -7,11 +7,13 @@ namespace onlab
     public enum DecideFunctionName
     {
         Average,
-        Maximum,
-        Minimum,
+        Strict,
+        Permissive,
         Voting,
         Median,
-        TopK
-     
+        TopK,
+        GeometricMean,
+        Confidence
+
     }
 }

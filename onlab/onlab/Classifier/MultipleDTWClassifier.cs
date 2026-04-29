@@ -1,4 +1,4 @@
-﻿using onlab.Functions;
+﻿using onlab.Functions.Descriptors;
 using onlab.SignerModel;
 using SigStat.Common;
 using SigStat.Common.Algorithms;
@@ -37,6 +37,10 @@ namespace onlab.Classifier
             List<double> values = new List<double>();
 
             double[][] signFeature = signature.GetAggregateFeature(Features).ToArray();
+            
+
+        
+            
             for (int i = 0; i < m.GenuineSignatures.Count; i++)
             {
                 // double dist = DtwImplementations.ExactDtwWikipedia(genFeature, signFeature, DistanceFunction);

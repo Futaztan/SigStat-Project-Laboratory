@@ -1,8 +1,13 @@
-﻿using OfficeOpenXml;
+﻿using Accord;
+using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using onlab.Classifier;
+
 using onlab.Functions;
+using onlab.Functions.Descriptors;
 using onlab.Functions.Enums;
+using onlab.PlusFeatures.Feature;
+using onlab.PlusFeatures.Transform;
 using SigStat.Common;
 using SigStat.Common.Algorithms.Distances;
 using SigStat.Common.Framework.Samplers;
@@ -16,12 +21,12 @@ using System.ComponentModel;
 using System.Drawing;
 namespace onlab
 {
-
+    //DELTAP MIATT ROSSZABB
 
     class Program
     {
         static List<Result> results = new List<Result>();
-        
+
         static TrainFunctions trainFunctions = new TrainFunctions();
         static TestFunctions testFunctions = new TestFunctions();
 
@@ -39,7 +44,9 @@ namespace onlab
             List<DecideResult> decideResults = new List<DecideResult>();
             foreach (var decide in decideFunctions.DecideFunctionList)
             {
-                decideResults.Add(UseMultipleClassifier(decide));
+                //decideResults.Add(UseMultipleClassifier(decide));
+                decideResults.Add(UseMultipleClassifierWithPlusFeatures(decide));
+
             }
             PrintDecideToExcel(decideResults);
 
@@ -105,7 +112,7 @@ namespace onlab
                 {
                     Pipeline = new SequentialTransformPipeline
                     {
-                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
+                        new ZNormalization() { InputFeature =  Features.X, OutputFeature = Features.X },
                         new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
                         new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
                     },
@@ -140,6 +147,97 @@ namespace onlab
             Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
             return res;
         }
+
+        private static DecideResult UseMultipleClassifierWithPlusFeatures(DecideFunctionDescriptor decide)
+        {
+            var path = @"C:\Users\David\Downloads\MCYT100.zip";
+            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
+            //var path = Console.ReadLine();
+
+            var benchmark = new VerifierBenchmark()
+            {
+                Loader = new MCYTLoader(path, true),
+                Logger = new SimpleConsoleLogger(),
+
+
+                Verifier = new Verifier()
+                {
+                    Pipeline = new SequentialTransformPipeline
+                    {
+                         new SpeedTransform(){
+
+                            X = Features.X,
+                            Y = Features.Y,
+                            T = Features.T,
+                            OutputSpeed = MyFeatures.Speed
+                          },
+                         new DeltaPTransform()
+                         {
+                             OutputDeltaP = MyFeatures.DeltaP,
+                             P = Features.Pressure
+                         },
+                         new AccelerationTransform()
+                         {
+                             T = Features.T,
+                             V = MyFeatures.Speed,
+                             OutPutAcceleration = MyFeatures.Acceleration
+                         },
+                         new CosTransform()
+                         {
+                             X = Features.X,
+                             Y = Features.Y,
+                             OutputCos = MyFeatures.Cos
+                         },
+                         new SinTransform()
+                         {
+                             X = Features.X,
+                             Y = Features.Y,
+                             OutputSin = MyFeatures.Sin
+                         },
+
+                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
+                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
+                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
+                        new ZNormalization() {InputFeature = MyFeatures.Speed, OutputFeature = MyFeatures.Speed},
+                        new ZNormalization() {InputFeature = MyFeatures.DeltaP, OutputFeature = MyFeatures.DeltaP},
+                        new ZNormalization() {InputFeature = MyFeatures.Acceleration, OutputFeature = MyFeatures.Acceleration},
+                        new ZNormalization() {InputFeature = MyFeatures.Sin, OutputFeature = MyFeatures.Sin},
+                        new ZNormalization() {InputFeature = MyFeatures.Cos, OutputFeature = MyFeatures.Cos}
+
+                    },
+                    Classifier = new MultipleDTWClassifier()
+                    {
+
+
+                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure,
+                            MyFeatures.Speed, MyFeatures.Sin, MyFeatures.Cos},
+                        //DistanceFunction = new EuclideanDistance().Calculate,
+                        DistanceFunction = new ManhattanDistance().Calculate,
+                        DecideFunction = decide,
+                        TestFunctions = testFunctions.TestFunctionList,
+                        ThresholdFunction = new TrainFunctionDescriptor { Name = TrainFunctionName.Medián, Method = trainFunctions.calculateThresholdMedian }
+
+
+
+
+                    },
+                    Logger = new SimpleConsoleLogger()
+
+                },
+                Sampler = new OddNSampler(10)
+            };
+
+            BenchmarkResults result = benchmark.Execute(true);
+
+            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name };
+
+            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
+            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
+            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
+            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
+            return res;
+        }
+
 
         private static void PrintToExcel()
         {
@@ -320,6 +418,7 @@ namespace onlab
                         new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
                         new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
                         new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
+
                     },
                     Classifier = new MyDTWClassifier()
                     {

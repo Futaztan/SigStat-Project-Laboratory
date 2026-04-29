@@ -11,6 +11,8 @@ namespace onlab.Functions.Enums
         Probability,
         Average,
         Min,
-        Voting
+        Voting,
+        Median,
+        Harmonic_Mean
     }
 }

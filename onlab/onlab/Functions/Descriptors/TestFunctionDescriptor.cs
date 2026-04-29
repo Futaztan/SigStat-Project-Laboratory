@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace onlab.Functions
+namespace onlab.Functions.Descriptors
 {
     public class TestFunctionDescriptor
     {
