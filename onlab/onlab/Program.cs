@@ -21,7 +21,6 @@ using System.ComponentModel;
 using System.Drawing;
 namespace onlab
 {
-    //DELTAP MIATT ROSSZABB
 
     class Program
     {
@@ -40,16 +39,41 @@ namespace onlab
             //UseBenchMark(trainFunctions.funcs[0], testFunctions.funcs[0]);
             //TestAllMethod();
             //PrintToExcel();
+
+            var featureSets = new List<List<FeatureDescriptor>>()
+                {
+                 new() { Features.X, Features.Y, Features.Pressure},
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.SpeedX, MyFeatures.SpeedY},
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.ConvertedPenDown },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Speed },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Cos, MyFeatures.Sin },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Acceleration },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.StrokeLengthToWidthRatio },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.DeltaP },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.LogCurvatureRadius },
+                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.CentroidDistance},
+
+                };
+            /*var featureSets = new List<List<FeatureDescriptor>>()
+            {
+                new() { Features.X, Features.Y, Features.Pressure },
+                new() { Features.X, Features.Y, Features.Pressure, Features.PenDown }
+            };*/
+
             DecideFunctions decideFunctions = new DecideFunctions();
             List<DecideResult> decideResults = new List<DecideResult>();
             foreach (var decide in decideFunctions.DecideFunctionList)
             {
                 //decideResults.Add(UseMultipleClassifier(decide));
-                decideResults.Add(UseMultipleClassifierWithPlusFeatures(decide));
+                foreach (var feature in featureSets)
+                {
+                    decideResults.Add(UseMultipleClassifierWithPlusFeatures(decide, feature));
+
+                }
 
             }
-            PrintDecideToExcel(decideResults);
-
+            //PrintDecideToExcel(decideResults);
+            PrintToExcelDecideAndFeature(decideResults);
 
 
 
@@ -95,6 +119,62 @@ namespace onlab
             File.WriteAllBytes(path, excel.GetAsByteArray());
 
             excel.Dispose();
+        }
+        private static void PrintToExcelDecideAndFeature(List<DecideResult> results)
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("onlab");
+            using (var excel = new ExcelPackage())
+            {
+                var workSheet = excel.Workbook.Worksheets.Add("AER");
+                var uniqueDecides = results.Select(r => r.DecideName).Distinct().OrderBy(n => n).ToList();
+
+                var uniqueFeatureSets = results
+                    .Select(r => string.Join(", ", r.FeatureName))
+                    .Distinct()
+                    .ToList();
+                using (var range = workSheet.Cells[1, 1, 1, uniqueFeatureSets.Count + 1])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                }
+
+                workSheet.Cells[1, 1].Value = "Decide / Feature";
+                for (int i = 0; i < uniqueFeatureSets.Count; i++)
+                {
+                    var cell = workSheet.Cells[1, i + 2];
+                    cell.Value = uniqueFeatureSets[i];
+                    cell.Style.WrapText = true;
+                }
+
+                for (int i = 0; i < uniqueDecides.Count; i++)
+                {
+                    workSheet.Cells[i + 2, 1].Value = uniqueDecides[i];
+                    workSheet.Cells[i + 2, 1].Style.Font.Bold = true;
+                }
+
+
+                foreach (var res in results)
+                {
+                    int row = uniqueDecides.IndexOf(res.DecideName) + 2;
+                    string currentFS = string.Join(", ", res.FeatureName);
+                    int col = uniqueFeatureSets.IndexOf(currentFS) + 2;
+
+                    workSheet.Cells[row, col].Value = res.AER;
+
+                    workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
+
+                }
+
+                workSheet.Cells[workSheet.Dimension.Address].AutoFitColumns();
+                workSheet.Column(1).Width = 25;
+
+                string path = @"C:\Users\David\Downloads\bme_decide_feature.xlsx";
+                if (File.Exists(path)) File.Delete(path);
+                File.WriteAllBytes(path, excel.GetAsByteArray());
+            }
+
         }
         private static DecideResult UseMultipleClassifier(DecideFunctionDescriptor decide)
         {
@@ -148,7 +228,7 @@ namespace onlab
             return res;
         }
 
-        private static DecideResult UseMultipleClassifierWithPlusFeatures(DecideFunctionDescriptor decide)
+        private static DecideResult UseMultipleClassifierWithPlusFeatures(DecideFunctionDescriptor decide, List<FeatureDescriptor> features)
         {
             var path = @"C:\Users\David\Downloads\MCYT100.zip";
             // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
@@ -194,23 +274,64 @@ namespace onlab
                              Y = Features.Y,
                              OutputSin = MyFeatures.Sin
                          },
+                         new StrokeLengthToWidthRatioTransform()
+                         {
+                             X = Features.X,
+                             Y = Features.Y,
+                             Output = MyFeatures.StrokeLengthToWidthRatio
+                         },
+                         new LogCurvatureRadiusTransform()
+                         {
+                             X = Features.X,
+                             Y = Features.Y,
+                             OutputLogCurvature = MyFeatures.LogCurvatureRadius
+                         },
+                         new PenDownConverter()
+                         {
+                             PenDown = Features.PenDown,
+                             Output = MyFeatures.ConvertedPenDown
+                         },
+                         new SpeedXTransform()
+                         {
+                             X = Features.X,
+                             T = Features.T,
+                             Output = MyFeatures.SpeedX
+                         },
+                         new SpeedYTransform()
+                         {
+                             Y = Features.Y,
+                             T = Features.T,
+                             Output = MyFeatures.SpeedY
+                         },
+                         new CentroidDistanceTransform()
+                         {
+                             X = Features.X,
+                             Y = Features.Y,
+                             Output = MyFeatures.CentroidDistance
+                         },
 
                         new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
                         new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
                         new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
-                        new ZNormalization() {InputFeature = MyFeatures.Speed, OutputFeature = MyFeatures.Speed},
-                        new ZNormalization() {InputFeature = MyFeatures.DeltaP, OutputFeature = MyFeatures.DeltaP},
-                        new ZNormalization() {InputFeature = MyFeatures.Acceleration, OutputFeature = MyFeatures.Acceleration},
-                        new ZNormalization() {InputFeature = MyFeatures.Sin, OutputFeature = MyFeatures.Sin},
-                        new ZNormalization() {InputFeature = MyFeatures.Cos, OutputFeature = MyFeatures.Cos}
+                        new ZNormalization() { InputFeature = MyFeatures.Speed, OutputFeature = MyFeatures.Speed},
+                        new ZNormalization() { InputFeature = MyFeatures.DeltaP, OutputFeature = MyFeatures.DeltaP},
+                        new ZNormalization() { InputFeature = MyFeatures.Acceleration, OutputFeature = MyFeatures.Acceleration},
+                        new ZNormalization() { InputFeature = MyFeatures.Sin, OutputFeature = MyFeatures.Sin},
+                        new ZNormalization() { InputFeature = MyFeatures.Cos, OutputFeature = MyFeatures.Cos},
+                        new ZNormalization() { InputFeature = MyFeatures.StrokeLengthToWidthRatio, OutputFeature = MyFeatures.StrokeLengthToWidthRatio},
+                        new ZNormalization() { InputFeature = MyFeatures.LogCurvatureRadius, OutputFeature = MyFeatures.LogCurvatureRadius},
+                        new ZNormalization() { InputFeature = MyFeatures.ConvertedPenDown, OutputFeature =  MyFeatures.ConvertedPenDown},
+                        new ZNormalization() { InputFeature =  MyFeatures.SpeedX, OutputFeature = MyFeatures.SpeedX },
+                        new ZNormalization() { InputFeature =  MyFeatures.SpeedY, OutputFeature = MyFeatures.SpeedY },
+                        new ZNormalization() { InputFeature =  MyFeatures.CentroidDistance, OutputFeature = MyFeatures.CentroidDistance }
+
 
                     },
                     Classifier = new MultipleDTWClassifier()
                     {
 
 
-                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure,
-                            MyFeatures.Speed, MyFeatures.Sin, MyFeatures.Cos},
+                        Features = features,
                         //DistanceFunction = new EuclideanDistance().Calculate,
                         DistanceFunction = new ManhattanDistance().Calculate,
                         DecideFunction = decide,
@@ -228,8 +349,13 @@ namespace onlab
             };
 
             BenchmarkResults result = benchmark.Execute(true);
+            List<string> names = new List<string>();
+            foreach (var feature in features)
+            {
+                names.Add(feature.Name);
+            }
 
-            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name };
+            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name, FeatureName = names };
 
             //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
             Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");

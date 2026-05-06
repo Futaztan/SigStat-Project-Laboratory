@@ -15,12 +15,13 @@ namespace onlab.Classifier
         public required List<FeatureDescriptor> Features { get; set; }
         private List<FunctionPair> results = new List<FunctionPair>();
         
-        public static readonly ConcurrentDictionary<(string, string), double> DistanceCache = new();
+        public static readonly ConcurrentDictionary<(string, string, string), double> DistanceCache = new();
 
         private double GetCachedDtw(Signature s1, Signature s2, double[][] f1, double[][] f2)
         {
-
-            var key = string.Compare(s1.ID, s2.ID) < 0 ? (s1.ID, s2.ID) : (s2.ID, s1.ID);
+            var featuresKey = string.Join("|", Features.Select(f => f.Name).OrderBy(n => n));
+            var idKey = string.Compare(s1.ID, s2.ID) < 0 ? (s1.ID, s2.ID) : (s2.ID, s1.ID);
+            var key = (idKey.Item1, idKey.Item2, featuresKey);
 
             return DistanceCache.GetOrAdd(key, _ =>
                 DtwImplementations.ExactDtwWikipedia(f1, f2, DistanceFunction));

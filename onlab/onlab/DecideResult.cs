@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SigStat.Common;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,6 +8,8 @@ namespace onlab
     public class DecideResult
     {
         public DecideFunctionName DecideName { get; set; }
+        public List<string> FeatureName { get; set; }
+        
         public double AER { get; set; }
         public double FAR { get; set; }
         public double FRR { get; set; }

@@ -99,8 +99,8 @@ namespace onlab.Functions
         }
         private double ByHarmonicMean(List<double> values, double threshold)
         {
-            // Védelem a nullával való osztás ellen (bár távolság ritkán pont 0)
-            if (values.Any(v => v <= 0.0001)) return ToSigmoid(0, threshold);
+        
+            if (values.Any(v => v ==0)) return ToSigmoid(0, threshold);
 
             double sumOfInverses = values.Sum(v => 1.0 / v);
             double harmonicMean = values.Count / sumOfInverses;
