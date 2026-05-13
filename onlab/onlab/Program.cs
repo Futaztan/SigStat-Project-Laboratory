@@ -1,5 +1,6 @@
 ﻿using Accord;
 using OfficeOpenXml;
+using OfficeOpenXml.ConditionalFormatting;
 using OfficeOpenXml.Style;
 using onlab.Classifier;
 
@@ -42,23 +43,31 @@ namespace onlab
 
             var featureSets = new List<List<FeatureDescriptor>>()
                 {
-                 new() { Features.X, Features.Y, Features.Pressure},
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.SpeedX, MyFeatures.SpeedY},
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.ConvertedPenDown },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Speed },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Cos, MyFeatures.Sin },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.Acceleration },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.StrokeLengthToWidthRatio },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.DeltaP },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.LogCurvatureRadius },
-                 new() { Features.X, Features.Y, Features.Pressure, MyFeatures.CentroidDistance},
+                 //new() { Features.X},
+                 //new() { Features.Y},
+                 //new() { Features.Pressure},
+                 //new() { MyFeatures.Speed},
+                 //new() { MyFeatures.SpeedX},
+                 //new() { MyFeatures.SpeedY},
+                 //new() { MyFeatures.DeltaP},
+                 //new() { MyFeatures.Acceleration},
+                 //new() { MyFeatures.Sin},
+                 //new() { MyFeatures.Cos},
+                 //new() { MyFeatures.StrokeLengthToWidthRatio},
+                 //new() { MyFeatures.LogCurvatureRadius},
+                 //new() { MyFeatures.CentroidDistance},
+                 //new() { MyFeatures.ConvertedPenDown},
+                 //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
+                 //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
+                 //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance},
+                 //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
+                 //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
+                 //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance,MyFeatures.ConvertedPenDown},
 
+                  new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
+                 MyFeatures.Sin,MyFeatures.Cos, MyFeatures.CentroidDistance,MyFeatures.ConvertedPenDown}
                 };
-            /*var featureSets = new List<List<FeatureDescriptor>>()
-            {
-                new() { Features.X, Features.Y, Features.Pressure },
-                new() { Features.X, Features.Y, Features.Pressure, Features.PenDown }
-            };*/
+
 
             DecideFunctions decideFunctions = new DecideFunctions();
             List<DecideResult> decideResults = new List<DecideResult>();
@@ -122,6 +131,7 @@ namespace onlab
         }
         private static void PrintToExcelDecideAndFeature(List<DecideResult> results)
         {
+
             ExcelPackage.License.SetNonCommercialPersonal("onlab");
             using (var excel = new ExcelPackage())
             {
@@ -132,34 +142,42 @@ namespace onlab
                     .Select(r => string.Join(", ", r.FeatureName))
                     .Distinct()
                     .ToList();
-                using (var range = workSheet.Cells[1, 1, 1, uniqueFeatureSets.Count + 1])
+                using (var range = workSheet.Cells[1, 1, 1, uniqueDecides.Count + 1])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
                 }
+                using (var range = workSheet.Cells[1, 1, uniqueFeatureSets.Count + 1, 1])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
 
-                workSheet.Cells[1, 1].Value = "Decide / Feature";
+                }
+
+                workSheet.Cells[1, 1].Value = "Decide\n/\nFeature";
                 for (int i = 0; i < uniqueFeatureSets.Count; i++)
                 {
-                    var cell = workSheet.Cells[1, i + 2];
+                    var cell = workSheet.Cells[i + 2, 1];
                     cell.Value = uniqueFeatureSets[i];
                     cell.Style.WrapText = true;
                 }
 
                 for (int i = 0; i < uniqueDecides.Count; i++)
                 {
-                    workSheet.Cells[i + 2, 1].Value = uniqueDecides[i];
-                    workSheet.Cells[i + 2, 1].Style.Font.Bold = true;
+                    workSheet.Cells[1, i + 2].Value = uniqueDecides[i];
+                    workSheet.Cells[1, 1].Style.Font.Bold = true;
                 }
 
 
                 foreach (var res in results)
                 {
-                    int row = uniqueDecides.IndexOf(res.DecideName) + 2;
+                    int col = uniqueDecides.IndexOf(res.DecideName) + 2;
                     string currentFS = string.Join(", ", res.FeatureName);
-                    int col = uniqueFeatureSets.IndexOf(currentFS) + 2;
+                    int row = uniqueFeatureSets.IndexOf(currentFS) + 2;
 
                     workSheet.Cells[row, col].Value = res.AER;
 
@@ -168,7 +186,15 @@ namespace onlab
                 }
 
                 workSheet.Cells[workSheet.Dimension.Address].AutoFitColumns();
-                workSheet.Column(1).Width = 25;
+                // Add TwoColorScale conditional formatting to visualize temperatures
+                // ColorTranslator is a utility from System.Drawing.Primitives.
+                var cfRule = workSheet.ConditionalFormatting.AddThreeColorScale(workSheet.Cells[2, 2, 2 + uniqueFeatureSets.Count, 2 + uniqueDecides.Count]);
+                cfRule.LowValue.Color = ColorTranslator.FromHtml("#FF63BE7B");
+                cfRule.MiddleValue.Color = ColorTranslator.FromHtml("#FFFFEB84");
+                //cfRule.MiddleValue.Type = eExcelConditionalFormattingValueObjectType.Percentile;
+                // cfRule.MiddleValue.Value = 50;
+                cfRule.HighValue.Color = ColorTranslator.FromHtml("#FFF8696B");
+
 
                 string path = @"C:\Users\David\Downloads\bme_decide_feature.xlsx";
                 if (File.Exists(path)) File.Delete(path);

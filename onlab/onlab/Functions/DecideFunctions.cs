@@ -14,13 +14,13 @@ namespace onlab.Functions
         public DecideFunctions()
         {
             DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Strict, Method = ByStrict });
-            DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Permissive, Method = ByPermissive });
+            //DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Permissive, Method = ByPermissive });
             DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Average, Method = ByAverage });
             DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Median, Method = ByMedian });
             DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Voting, Method = ByVoting });
-            DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.TopK, Method = ByTopK });
+           // DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.TopK, Method = ByTopK });
             DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.GeometricMean, Method = ByGeometricMean });
-            DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Confidence, Method = ByConfidence });
+           // DecideFunctionList.Add(new DecideFunctionDescriptor { Name = DecideFunctionName.Confidence, Method = ByConfidence });
 
         }
 
