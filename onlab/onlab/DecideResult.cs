@@ -1,9 +1,4 @@
-﻿using SigStat.Common;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace onlab
+﻿namespace onlab
 {
     public class DecideResult
     {

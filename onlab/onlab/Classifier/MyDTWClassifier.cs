@@ -1,14 +1,8 @@
-﻿
-using Accord.Math;
-using onlab.SignerModel;
+﻿using onlab.SignerModel;
 using SigStat.Common;
 using SigStat.Common.Algorithms;
-using SigStat.Common.Helpers.Serialization;
 using SigStat.Common.Pipeline;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
 
 namespace onlab.Classifier
 {

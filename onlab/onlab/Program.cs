@@ -1,72 +1,49 @@
-﻿using Accord;
-using OfficeOpenXml;
-using OfficeOpenXml.ConditionalFormatting;
-using OfficeOpenXml.Style;
-using onlab.Classifier;
-
-using onlab.Functions;
-using onlab.Functions.Descriptors;
-using onlab.Functions.Enums;
+﻿using onlab.Functions;
 using onlab.PlusFeatures.Feature;
-using onlab.PlusFeatures.Transform;
 using SigStat.Common;
-using SigStat.Common.Algorithms.Distances;
-using SigStat.Common.Framework.Samplers;
 using SigStat.Common.Loaders;
-using SigStat.Common.Logging;
-using SigStat.Common.Model;
-using SigStat.Common.Pipeline;
-using SigStat.Common.PipelineItems.Classifiers;
-using SigStat.Common.PipelineItems.Transforms.Preprocessing;
-using System.ComponentModel;
-using System.Drawing;
+
 namespace onlab
 {
-
     class Program
     {
-        static List<Result> results = new List<Result>();
-
-        static TrainFunctions trainFunctions = new TrainFunctions();
-        static TestFunctions testFunctions = new TestFunctions();
-
         static void Main(string[] args)
         {
-
-
+            ExcelManager excelManager = new();
+            BenchmarkManager benchmarkManager = new();
             //LoadSignaturesExample();
             //UseBenchmarkExample();
-
             //UseBenchMark(trainFunctions.funcs[0], testFunctions.funcs[0]);
             //TestAllMethod();
             //PrintToExcel();
 
             var featureSets = new List<List<FeatureDescriptor>>()
+            {
+                // new() { Features.X, MyFeatures.ConvertedPenDown},
+                // new() { Features.Y, MyFeatures.ConvertedPenDown},
+                // new() { Features.Pressure, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.Speed, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.SpeedX, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.SpeedY, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.DeltaP, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.Acceleration, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.Sin, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.Cos, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.StrokeLengthToWidthRatio, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.LogCurvatureRadius, MyFeatures.ConvertedPenDown},
+                // new() { MyFeatures.CentroidDistance, MyFeatures.ConvertedPenDown}
+                //new() { MyFeatures.ConvertedPenDown},
+                //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
+                //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
+                //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance},
+                new()
                 {
-                 //new() { Features.X},
-                 //new() { Features.Y},
-                 //new() { Features.Pressure},
-                 //new() { MyFeatures.Speed},
-                 //new() { MyFeatures.SpeedX},
-                 //new() { MyFeatures.SpeedY},
-                 //new() { MyFeatures.DeltaP},
-                 //new() { MyFeatures.Acceleration},
-                 //new() { MyFeatures.Sin},
-                 //new() { MyFeatures.Cos},
-                 //new() { MyFeatures.StrokeLengthToWidthRatio},
-                 //new() { MyFeatures.LogCurvatureRadius},
-                 //new() { MyFeatures.CentroidDistance},
-                 //new() { MyFeatures.ConvertedPenDown},
-                 //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
-                 //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
-                 //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance},
-                 //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
-                 //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
-                 //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance,MyFeatures.ConvertedPenDown},
+                    Features.X, Features.Y, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY, Features.Pressure,
+                   MyFeatures.Sin, MyFeatures.Cos, MyFeatures.CentroidDistance,
+                    MyFeatures.ConvertedPenDown
+                },
 
-                  new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
-                 MyFeatures.Sin,MyFeatures.Cos, MyFeatures.CentroidDistance,MyFeatures.ConvertedPenDown}
-                };
+            };
 
 
             DecideFunctions decideFunctions = new DecideFunctions();
@@ -76,465 +53,32 @@ namespace onlab
                 //decideResults.Add(UseMultipleClassifier(decide));
                 foreach (var feature in featureSets)
                 {
-                    decideResults.Add(UseMultipleClassifierWithPlusFeatures(decide, feature));
-
+                    decideResults.Add(benchmarkManager.UseMultipleClassifierWithPlusFeatures(decide, feature));
                 }
-
             }
+
             //PrintDecideToExcel(decideResults);
-            PrintToExcelDecideAndFeature(decideResults);
-
-
-
-        }
-        private static void PrintDecideToExcel(List<DecideResult> results)
-        {
-            results = results.OrderBy(r => r.DecideName).ToList();
-            ExcelPackage.License.SetNonCommercialPersonal("onlab");
-            var excel = new ExcelPackage();
-            var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
-
-            workSheet.Row(1).Height = 20;
-            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            workSheet.Row(1).Style.Font.Bold = true;
-            workSheet.Cells[1, 1].Value = "Decide Name";
-            workSheet.Cells[1, 2].Value = "AER";
-            workSheet.Cells[1, 3].Value = "FAR";
-            workSheet.Cells[1, 4].Value = "FRR";
-            int row = 2;
-            foreach (var result in results)
-            {
-                for (int i = 1; i <= 4; i++)
-                {
-                    workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
-                }
-                workSheet.Cells[row, 1].Value = result.DecideName;
-                workSheet.Cells[row, 2].Value = result.AER;
-                workSheet.Cells[row, 3].Value = result.FAR;
-                workSheet.Cells[row, 4].Value = result.FRR;
-                row++;
-
-            }
-
-            string path = @"C:\Users\David\Downloads\bme_decide.xlsx";
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-            FileStream objFileStrm = File.Create(path);
-            objFileStrm.Close();
-
-
-            File.WriteAllBytes(path, excel.GetAsByteArray());
-
-            excel.Dispose();
-        }
-        private static void PrintToExcelDecideAndFeature(List<DecideResult> results)
-        {
-
-            ExcelPackage.License.SetNonCommercialPersonal("onlab");
-            using (var excel = new ExcelPackage())
-            {
-                var workSheet = excel.Workbook.Worksheets.Add("AER");
-                var uniqueDecides = results.Select(r => r.DecideName).Distinct().OrderBy(n => n).ToList();
-
-                var uniqueFeatureSets = results
-                    .Select(r => string.Join(", ", r.FeatureName))
-                    .Distinct()
-                    .ToList();
-                using (var range = workSheet.Cells[1, 1, 1, uniqueDecides.Count + 1])
-                {
-                    range.Style.Font.Bold = true;
-                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                }
-                using (var range = workSheet.Cells[1, 1, uniqueFeatureSets.Count + 1, 1])
-                {
-                    range.Style.Font.Bold = true;
-                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-
-                }
-
-                workSheet.Cells[1, 1].Value = "Decide\n/\nFeature";
-                for (int i = 0; i < uniqueFeatureSets.Count; i++)
-                {
-                    var cell = workSheet.Cells[i + 2, 1];
-                    cell.Value = uniqueFeatureSets[i];
-                    cell.Style.WrapText = true;
-                }
-
-                for (int i = 0; i < uniqueDecides.Count; i++)
-                {
-                    workSheet.Cells[1, i + 2].Value = uniqueDecides[i];
-                    workSheet.Cells[1, 1].Style.Font.Bold = true;
-                }
-
-
-                foreach (var res in results)
-                {
-                    int col = uniqueDecides.IndexOf(res.DecideName) + 2;
-                    string currentFS = string.Join(", ", res.FeatureName);
-                    int row = uniqueFeatureSets.IndexOf(currentFS) + 2;
-
-                    workSheet.Cells[row, col].Value = res.AER;
-
-                    workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
-
-                }
-
-                workSheet.Cells[workSheet.Dimension.Address].AutoFitColumns();
-                // Add TwoColorScale conditional formatting to visualize temperatures
-                // ColorTranslator is a utility from System.Drawing.Primitives.
-                var cfRule = workSheet.ConditionalFormatting.AddThreeColorScale(workSheet.Cells[2, 2, 2 + uniqueFeatureSets.Count, 2 + uniqueDecides.Count]);
-                cfRule.LowValue.Color = ColorTranslator.FromHtml("#FF63BE7B");
-                cfRule.MiddleValue.Color = ColorTranslator.FromHtml("#FFFFEB84");
-                //cfRule.MiddleValue.Type = eExcelConditionalFormattingValueObjectType.Percentile;
-                // cfRule.MiddleValue.Value = 50;
-                cfRule.HighValue.Color = ColorTranslator.FromHtml("#FFF8696B");
-
-
-                string path = @"C:\Users\David\Downloads\bme_decide_feature.xlsx";
-                if (File.Exists(path)) File.Delete(path);
-                File.WriteAllBytes(path, excel.GetAsByteArray());
-            }
-
-        }
-        private static DecideResult UseMultipleClassifier(DecideFunctionDescriptor decide)
-        {
-            var path = @"C:\Users\David\Downloads\MCYT100.zip";
-            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
-            //var path = Console.ReadLine();
-
-            var benchmark = new VerifierBenchmark()
-            {
-                Loader = new MCYTLoader(path, true),
-                Logger = new SimpleConsoleLogger(),
-
-
-                Verifier = new Verifier()
-                {
-                    Pipeline = new SequentialTransformPipeline
-                    {
-                        new ZNormalization() { InputFeature =  Features.X, OutputFeature = Features.X },
-                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
-                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
-                    },
-                    Classifier = new MultipleDTWClassifier()
-                    {
-
-
-                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure },
-                        //DistanceFunction = new EuclideanDistance().Calculate,
-                        DistanceFunction = new ManhattanDistance().Calculate,
-                        DecideFunction = decide,
-                        TestFunctions = testFunctions.TestFunctionList,
-                        ThresholdFunction = new TrainFunctionDescriptor { Name = TrainFunctionName.Medián, Method = trainFunctions.calculateThresholdMedian }
-
-
-
-
-                    },
-                    Logger = new SimpleConsoleLogger()
-
-                },
-                Sampler = new OddNSampler(10)
-            };
-
-            BenchmarkResults result = benchmark.Execute(true);
-
-            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name };
-
-            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
-            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
-            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
-            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
-            return res;
+            excelManager.PrintToExcelDecideAndFeature(decideResults);
         }
 
-        private static DecideResult UseMultipleClassifierWithPlusFeatures(DecideFunctionDescriptor decide, List<FeatureDescriptor> features)
+        private static void TestAllMethod(BenchmarkManager benchmarkManager)
         {
-            var path = @"C:\Users\David\Downloads\MCYT100.zip";
-            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
-            //var path = Console.ReadLine();
-
-            var benchmark = new VerifierBenchmark()
-            {
-                Loader = new MCYTLoader(path, true),
-                Logger = new SimpleConsoleLogger(),
-
-
-                Verifier = new Verifier()
-                {
-                    Pipeline = new SequentialTransformPipeline
-                    {
-                         new SpeedTransform(){
-
-                            X = Features.X,
-                            Y = Features.Y,
-                            T = Features.T,
-                            OutputSpeed = MyFeatures.Speed
-                          },
-                         new DeltaPTransform()
-                         {
-                             OutputDeltaP = MyFeatures.DeltaP,
-                             P = Features.Pressure
-                         },
-                         new AccelerationTransform()
-                         {
-                             T = Features.T,
-                             V = MyFeatures.Speed,
-                             OutPutAcceleration = MyFeatures.Acceleration
-                         },
-                         new CosTransform()
-                         {
-                             X = Features.X,
-                             Y = Features.Y,
-                             OutputCos = MyFeatures.Cos
-                         },
-                         new SinTransform()
-                         {
-                             X = Features.X,
-                             Y = Features.Y,
-                             OutputSin = MyFeatures.Sin
-                         },
-                         new StrokeLengthToWidthRatioTransform()
-                         {
-                             X = Features.X,
-                             Y = Features.Y,
-                             Output = MyFeatures.StrokeLengthToWidthRatio
-                         },
-                         new LogCurvatureRadiusTransform()
-                         {
-                             X = Features.X,
-                             Y = Features.Y,
-                             OutputLogCurvature = MyFeatures.LogCurvatureRadius
-                         },
-                         new PenDownConverter()
-                         {
-                             PenDown = Features.PenDown,
-                             Output = MyFeatures.ConvertedPenDown
-                         },
-                         new SpeedXTransform()
-                         {
-                             X = Features.X,
-                             T = Features.T,
-                             Output = MyFeatures.SpeedX
-                         },
-                         new SpeedYTransform()
-                         {
-                             Y = Features.Y,
-                             T = Features.T,
-                             Output = MyFeatures.SpeedY
-                         },
-                         new CentroidDistanceTransform()
-                         {
-                             X = Features.X,
-                             Y = Features.Y,
-                             Output = MyFeatures.CentroidDistance
-                         },
-
-                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
-                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
-                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
-                        new ZNormalization() { InputFeature = MyFeatures.Speed, OutputFeature = MyFeatures.Speed},
-                        new ZNormalization() { InputFeature = MyFeatures.DeltaP, OutputFeature = MyFeatures.DeltaP},
-                        new ZNormalization() { InputFeature = MyFeatures.Acceleration, OutputFeature = MyFeatures.Acceleration},
-                        new ZNormalization() { InputFeature = MyFeatures.Sin, OutputFeature = MyFeatures.Sin},
-                        new ZNormalization() { InputFeature = MyFeatures.Cos, OutputFeature = MyFeatures.Cos},
-                        new ZNormalization() { InputFeature = MyFeatures.StrokeLengthToWidthRatio, OutputFeature = MyFeatures.StrokeLengthToWidthRatio},
-                        new ZNormalization() { InputFeature = MyFeatures.LogCurvatureRadius, OutputFeature = MyFeatures.LogCurvatureRadius},
-                        new ZNormalization() { InputFeature = MyFeatures.ConvertedPenDown, OutputFeature =  MyFeatures.ConvertedPenDown},
-                        new ZNormalization() { InputFeature =  MyFeatures.SpeedX, OutputFeature = MyFeatures.SpeedX },
-                        new ZNormalization() { InputFeature =  MyFeatures.SpeedY, OutputFeature = MyFeatures.SpeedY },
-                        new ZNormalization() { InputFeature =  MyFeatures.CentroidDistance, OutputFeature = MyFeatures.CentroidDistance }
-
-
-                    },
-                    Classifier = new MultipleDTWClassifier()
-                    {
-
-
-                        Features = features,
-                        //DistanceFunction = new EuclideanDistance().Calculate,
-                        DistanceFunction = new ManhattanDistance().Calculate,
-                        DecideFunction = decide,
-                        TestFunctions = testFunctions.TestFunctionList,
-                        ThresholdFunction = new TrainFunctionDescriptor { Name = TrainFunctionName.Medián, Method = trainFunctions.calculateThresholdMedian }
-
-
-
-
-                    },
-                    Logger = new SimpleConsoleLogger()
-
-                },
-                Sampler = new OddNSampler(10)
-            };
-
-            BenchmarkResults result = benchmark.Execute(true);
-            List<string> names = new List<string>();
-            foreach (var feature in features)
-            {
-                names.Add(feature.Name);
-            }
-
-            DecideResult res = new DecideResult { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, DecideName = decide.Name, FeatureName = names };
-
-            //Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
-            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
-            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
-            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
-            return res;
-        }
-
-
-        private static void PrintToExcel()
-        {
-            ExcelPackage.License.SetNonCommercialPersonal("onlab");
-
-
-            var excel = new ExcelPackage();
-            var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
-
-
-            workSheet.Row(1).Height = 20;
-            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            workSheet.Row(1).Style.Font.Bold = true;
-
-            workSheet.Cells[1, 1].Value = "Train Name";
-            workSheet.Cells[1, 2].Value = "Test Name";
-            workSheet.Cells[1, 3].Value = "AER";
-            workSheet.Cells[1, 4].Value = "FAR";
-            workSheet.Cells[1, 5].Value = "FRR";
-
-
-            results = results.OrderBy(o => o.TrainName).ThenBy(o => o.TestName).ToList();
-            int row = 2;
-
-            foreach (var result in results)
-            {
-                for (int i = 1; i <= 5; i++)
-                {
-                    workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
-                }
-                workSheet.Cells[row, 1].Value = result.TrainName;
-                workSheet.Cells[row, 2].Value = result.TestName;
-                workSheet.Cells[row, 3].Value = result.AER;
-                workSheet.Cells[row, 4].Value = result.FAR;
-                workSheet.Cells[row, 5].Value = result.FRR;
-                row++;
-
-            }
-
-            workSheet = excel.Workbook.Worksheets.Add("AER");
-
-            workSheet.Row(1).Height = 20;
-            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            workSheet.Row(1).Style.Font.Bold = true;
-            string prev = "";
-            row = 1;
-            int col = 2;
-            foreach (var result in results)
-            {
-                if (!result.TrainName.Equals(prev))
-                {
-                    row++;
-                    col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
-                }
-
-                workSheet.Cells[1, col].Value = result.TestName;
-                workSheet.Cells[row, col].Value = result.AER;
-                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
-                col++;
-            }
-
-            workSheet = excel.Workbook.Worksheets.Add("FAR");
-            workSheet.Row(1).Height = 20;
-            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            workSheet.Row(1).Style.Font.Bold = true;
-            prev = "";
-            row = 1;
-            col = 2;
-            foreach (var result in results)
-            {
-                if (!result.TrainName.Equals(prev))
-                {
-                    row++;
-                    col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
-                }
-
-                workSheet.Cells[1, col].Value = result.TestName;
-                workSheet.Cells[row, col].Value = result.FAR;
-                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
-                col++;
-            }
-
-
-            workSheet = excel.Workbook.Worksheets.Add("FRR");
-
-            workSheet.Row(1).Height = 20;
-            workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            workSheet.Row(1).Style.Font.Bold = true;
-            prev = "";
-            row = 1;
-            col = 2;
-            foreach (var result in results)
-            {
-                if (!result.TrainName.Equals(prev))
-                {
-                    row++;
-                    col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
-                }
-
-                workSheet.Cells[1, col].Value = result.TestName;
-                workSheet.Cells[row, col].Value = result.FRR;
-                workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
-                col++;
-            }
-
-
-
-
-            string path = @"C:\Users\David\Downloads\bme.xlsx";
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-            FileStream objFileStrm = File.Create(path);
-            objFileStrm.Close();
-
-
-            File.WriteAllBytes(path, excel.GetAsByteArray());
-
-            excel.Dispose();
-        }
-
-
-
-        private static void TestAllMethod()
-        {
+            List<Result> results = new List<Result>();
             TrainFunctions trainFunctions = new TrainFunctions();
             TestFunctions testFunctions = new TestFunctions();
             foreach (var train in trainFunctions.TrainFunctionList)
             {
                 foreach (var test in testFunctions.TestFunctionList)
                 {
-                    UseBenchMark(train, test);
+                    results = benchmarkManager.TrainAndTestFunctions(train, test);
                 }
             }
+
             foreach (var result in results)
             {
                 result.Print();
             }
+
             results = results.OrderBy(o => o.AER).ToList();
             Console.WriteLine("Legjobb AER: ");
             results[0].Print();
@@ -544,102 +88,6 @@ namespace onlab
             Console.WriteLine("Legjobb FRR aztán FAR: ");
             results = results.OrderBy(o => o.FRR).ThenBy(o => o.FAR).ToList();
             results[0].Print();
-        }
-
-
-        private static void UseBenchMark(TrainFunctionDescriptor train, TestFunctionDescriptor test)
-        {
-            Func<IEnumerable<double>, double> trainFunction = train.Method;
-            string trainName = train.Name.ToString();
-            Func<List<double>, double, double> testFunction = test.Method;
-            string testName = test.Name.ToString();
-            var path = @"C:\Users\David\Downloads\MCYT100.zip";
-            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/MCYT100.zip");
-            //var path = Console.ReadLine();
-
-            var benchmark = new VerifierBenchmark()
-            {
-                Loader = new MCYTLoader(path, true),
-                Logger = new SimpleConsoleLogger(),
-
-
-                Verifier = new Verifier()
-                {
-                    Pipeline = new SequentialTransformPipeline
-                    {
-                        new ZNormalization() { InputFeature = Features.X, OutputFeature = Features.X },
-                        new ZNormalization() { InputFeature = Features.Y, OutputFeature = Features.Y },
-                        new ZNormalization() { InputFeature = Features.Pressure, OutputFeature = Features.Pressure },
-
-                    },
-                    Classifier = new MyDTWClassifier()
-                    {
-
-
-                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.Pressure },
-                        //DistanceFunction = new EuclideanDistance().Calculate,
-                        DistanceFunction = new ManhattanDistance().Calculate,
-                        TestFunction = testFunction,
-                        ThresholdFunction = trainFunction
-
-
-
-
-                    },
-                    Logger = new SimpleConsoleLogger()
-
-                },
-                Sampler = new OddNSampler(10)
-            };
-
-            BenchmarkResults result = benchmark.Execute(true);
-            Result res = new Result { AER = result.FinalResult.Aer, FAR = result.FinalResult.Far, FRR = result.FinalResult.Frr, TrainName = trainName, TestName = testName };
-            results.Add(res);
-            Console.WriteLine("TEST METHOD: " + testName + "\t TRAIN METHOD: " + trainName);
-            Console.WriteLine($"AER (Average Error Rate): {result.FinalResult.Aer}");
-            Console.WriteLine($"FAR (False Acceptance Rate): {result.FinalResult.Far}");
-            Console.WriteLine($"FRR (False Rejection Rate): {result.FinalResult.Frr}");
-
-
-        }
-
-        private static void UseBenchmarkExample()
-        {
-            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
-            // var path = Console.ReadLine();
-            var path = @"C:\Users\David\Downloads\MCYT100.zip";
-
-
-            var benchmark = new VerifierBenchmark()
-            {
-                Loader = new MCYTLoader(path, true),
-                Logger = new SimpleConsoleLogger(),
-
-
-                Verifier = new Verifier()
-                {
-                    Classifier = new DtwClassifier()
-                    {
-                        Features = new List<FeatureDescriptor>() { Features.X, Features.Y, Features.T },
-                        //DistanceFunction = new EuclideanDistance().Calculate,
-                        Logger = new SimpleConsoleLogger()
-
-
-
-                    },
-                    Logger = new SimpleConsoleLogger()
-
-                },
-                Sampler = new FirstNSampler()
-            };
-            Console.WriteLine("aab");
-            BenchmarkResults result = benchmark.Execute(true);
-
-            Console.WriteLine("bb");
-            Console.WriteLine($"AER: {result.FinalResult.Aer}");
-            Console.WriteLine($"FAR: {result.FinalResult.Far}");
-            Console.WriteLine($"FRR: {result.FinalResult.Frr}");
-            Console.ReadKey();
         }
 
         private static void LoadSignaturesExample()
@@ -655,6 +103,7 @@ namespace onlab
             {
                 Console.WriteLine(signers[i].Signatures.Count);
             }
+
             var signature = signaturesOfUser1[0];
 
             Console.WriteLine($"A(z) {signature.Signer.ID}. aláíró {signature.ID}. aláírása:");
@@ -670,6 +119,7 @@ namespace onlab
             {
                 Console.WriteLine($"{x[i]} \t {y[i]} \t {p[i]} \t {t[i]}");
             }
+
             Console.ReadKey();
         }
     }
