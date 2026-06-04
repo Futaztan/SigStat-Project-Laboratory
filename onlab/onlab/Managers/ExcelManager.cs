@@ -2,21 +2,21 @@
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
-namespace onlab;
+namespace onlab.Managers;
 
 public class ExcelManager
 {
-     public void PrintToExcelDecideAndFeature(List<DecideResult> results)
+     public void PrintToExcelEnsembleClassifiersAndFeatures(List<Result> results)
         {
 
             ExcelPackage.License.SetNonCommercialPersonal("onlab");
             using (var excel = new ExcelPackage())
             {
                 var workSheet = excel.Workbook.Worksheets.Add("AER");
-                var uniqueDecides = results.Select(r => r.DecideName).Distinct().OrderBy(n => n).ToList();
+                var uniqueDecides = results.Select(r => r.EnsembleClassifierName).Distinct().OrderBy(n => n).ToList();
 
                 var uniqueFeatureSets = results
-                    .Select(r => string.Join(", ", r.FeatureName))
+                    .Select(r => string.Join(", ", r.FeatureNames))
                     .Distinct()
                     .ToList();
                 using (var range = workSheet.Cells[1, 1, 1, uniqueDecides.Count + 1])
@@ -52,8 +52,8 @@ public class ExcelManager
 
                 foreach (var res in results)
                 {
-                    int col = uniqueDecides.IndexOf(res.DecideName) + 2;
-                    string currentFS = string.Join(", ", res.FeatureName);
+                    int col = uniqueDecides.IndexOf(res.EnsembleClassifierName) + 2;
+                    string currentFS = string.Join(", ", res.FeatureNames);
                     int row = uniqueFeatureSets.IndexOf(currentFS) + 2;
 
                     workSheet.Cells[row, col].Value = res.AER;
@@ -72,8 +72,9 @@ public class ExcelManager
                 // cfRule.MiddleValue.Value = 50;
                 cfRule.HighValue.Color = ColorTranslator.FromHtml("#FFF8696B");
 
-
-                string path = @"C:\Users\David\Downloads\bme_decide_feature.xlsx";
+                
+                string appfolder = AppDomain.CurrentDomain.BaseDirectory;
+                string path = Path.Combine(appfolder, "ensemble_and_features.xlsx");
                 if (File.Exists(path)) File.Delete(path);
                 File.WriteAllBytes(path, excel.GetAsByteArray());
             }
@@ -81,9 +82,9 @@ public class ExcelManager
         }
      
      
-        public void PrintDecideToExcel(List<DecideResult> results)
+        public void PrintToExcelEnsembleClassifiers(List<Result> results)
         {
-            results = results.OrderBy(r => r.DecideName).ToList();
+            results = results.OrderBy(r => r.EnsembleClassifierName).ToList();
             ExcelPackage.License.SetNonCommercialPersonal("onlab");
             var excel = new ExcelPackage();
             var workSheet = excel.Workbook.Worksheets.Add("Összesítés");
@@ -102,7 +103,7 @@ public class ExcelManager
                 {
                     workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
                 }
-                workSheet.Cells[row, 1].Value = result.DecideName;
+                workSheet.Cells[row, 1].Value = result.EnsembleClassifierName;
                 workSheet.Cells[row, 2].Value = result.AER;
                 workSheet.Cells[row, 3].Value = result.FAR;
                 workSheet.Cells[row, 4].Value = result.FRR;
@@ -110,7 +111,8 @@ public class ExcelManager
 
             }
 
-            string path = @"C:\Users\David\Downloads\bme_decide.xlsx";
+            string appfolder = AppDomain.CurrentDomain.BaseDirectory;
+            string path = Path.Combine(appfolder, "ensemble.xlsx");
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -125,7 +127,7 @@ public class ExcelManager
         }
         
         
-        public void PrintTestandTrainToExcel(List<Result> results)
+        public void PrintToExcelSimpleClassifierAndThresholdFunction(List<Result> results)
         {
             ExcelPackage.License.SetNonCommercialPersonal("onlab");
 
@@ -145,7 +147,7 @@ public class ExcelManager
             workSheet.Cells[1, 5].Value = "FRR";
 
 
-            results = results.OrderBy(o => o.TrainName).ThenBy(o => o.TestName).ToList();
+            results = results.OrderBy(o => o.SimpleClassifierName).ThenBy(o => o.ThresholdFunctionName).ToList();
             int row = 2;
 
             foreach (var result in results)
@@ -154,8 +156,8 @@ public class ExcelManager
                 {
                     workSheet.Cells[row, i].Style.Numberformat.Format = "0.00%";
                 }
-                workSheet.Cells[row, 1].Value = result.TrainName;
-                workSheet.Cells[row, 2].Value = result.TestName;
+                workSheet.Cells[row, 1].Value = result.SimpleClassifierName;
+                workSheet.Cells[row, 2].Value = result.ThresholdFunctionName;
                 workSheet.Cells[row, 3].Value = result.AER;
                 workSheet.Cells[row, 4].Value = result.FAR;
                 workSheet.Cells[row, 5].Value = result.FRR;
@@ -173,15 +175,15 @@ public class ExcelManager
             int col = 2;
             foreach (var result in results)
             {
-                if (!result.TrainName.Equals(prev))
+                if (!result.SimpleClassifierName.Equals(prev))
                 {
                     row++;
                     col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
+                    workSheet.Cells[row, 1].Value = result.SimpleClassifierName;
+                    prev = result.SimpleClassifierName;
                 }
 
-                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[1, col].Value = result.ThresholdFunctionName;
                 workSheet.Cells[row, col].Value = result.AER;
                 workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
                 col++;
@@ -196,15 +198,15 @@ public class ExcelManager
             col = 2;
             foreach (var result in results)
             {
-                if (!result.TrainName.Equals(prev))
+                if (!result.SimpleClassifierName.Equals(prev))
                 {
                     row++;
                     col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
+                    workSheet.Cells[row, 1].Value = result.SimpleClassifierName;
+                    prev = result.SimpleClassifierName;
                 }
 
-                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[1, col].Value = result.ThresholdFunctionName;
                 workSheet.Cells[row, col].Value = result.FAR;
                 workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
                 col++;
@@ -221,15 +223,15 @@ public class ExcelManager
             col = 2;
             foreach (var result in results)
             {
-                if (!result.TrainName.Equals(prev))
+                if (!result.SimpleClassifierName.Equals(prev))
                 {
                     row++;
                     col = 2;
-                    workSheet.Cells[row, 1].Value = result.TrainName;
-                    prev = result.TrainName;
+                    workSheet.Cells[row, 1].Value = result.SimpleClassifierName;
+                    prev = result.SimpleClassifierName;
                 }
 
-                workSheet.Cells[1, col].Value = result.TestName;
+                workSheet.Cells[1, col].Value = result.ThresholdFunctionName;
                 workSheet.Cells[row, col].Value = result.FRR;
                 workSheet.Cells[row, col].Style.Numberformat.Format = "0.00%";
                 col++;
@@ -238,7 +240,8 @@ public class ExcelManager
 
 
 
-            string path = @"C:\Users\David\Downloads\bme.xlsx";
+            string appfolder = AppDomain.CurrentDomain.BaseDirectory;
+            string path = Path.Combine(appfolder, "simple_and_threshold.xlsx");
             if (File.Exists(path))
             {
                 File.Delete(path);

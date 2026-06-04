@@ -1,11 +1,13 @@
-﻿using onlab.Functions.Descriptors;
+﻿using System.Collections.Concurrent;
+using onlab.Functions.EnsembleClassifiers;
+using onlab.Functions.SimpleClassifiers;
+using onlab.Functions.ThresholdFunctions;
 using onlab.SignerModel;
 using SigStat.Common;
 using SigStat.Common.Algorithms;
 using SigStat.Common.Pipeline;
-using System.Collections.Concurrent;
 
-namespace onlab.Classifier
+namespace onlab.Classifiers
 {
     public class MultipleDTWClassifier : IClassifier
     {
@@ -24,9 +26,9 @@ namespace onlab.Classifier
                 DtwImplementations.ExactDtwWikipedia(f1, f2, DistanceFunction));
         }
 
-        public required TrainFunctionDescriptor ThresholdFunction { get; set; }
-        public required List<TestFunctionDescriptor> TestFunctions { get; set; }
-        public required DecideFunctionDescriptor DecideFunction { get; set; }
+        public required IThresholdFunction ThresholdFunction { get; set; }
+        public required List<SimpleClassifierBase> SimpleClassifiers { get; set; }
+        public required IEnsembleClassifier EnsembleClassifier { get; set; }
 
         public required Func<double[], double[], double> DistanceFunction { get; set; }
 
@@ -45,22 +47,22 @@ namespace onlab.Classifier
                 values.Add(dist);
             }
 
-            List<FunctionPair> results = new List<FunctionPair>();
+            List<Result> results = new ();
 
-            foreach (var testFunction in TestFunctions)
+            foreach (var classifier in SimpleClassifiers)
             {
-                double probability = testFunction.Method(values, m.Threshold);
-                results.Add(new FunctionPair
+                double probability = classifier.Decide(values, m.Threshold);
+                results.Add(new Result()
                 {
-                    TrainFunction = ThresholdFunction.Method,
+                    SimpleClassifierName = classifier.Name,
                     Threshold = m.Threshold,
-                    Probability = probability,
-                    TestFunction = testFunction.Method
+                    SimpleProbability = probability,
+                    ThresholdFunctionName = ThresholdFunction.Name
                 });
             }
 
 
-            return DecideFunction.Method(results);
+            return EnsembleClassifier.Decide(results);
         }
 
         ISignerModel IClassifier.Train(List<Signature> signatures)
@@ -88,9 +90,8 @@ namespace onlab.Classifier
                  double tr = ThresholdFunction.Method(distancesBetweenValid);
                  trainResults.Add(new FunctionPair { TrainFunction = ThresholdFunction.Name, Threshold = tr });
              }*/
-            double tr = ThresholdFunction.Method(distancesBetweenValid);
-
-
+            double tr = ThresholdFunction.CalculateThreshold(distancesBetweenValid);
+            
             MultipleDTWSignerModel model = new MultipleDTWSignerModel
             {
                 SignerID = signatures[0].Signer.ID,

@@ -1,10 +1,12 @@
-﻿using onlab.SignerModel;
+﻿using System.Collections.Concurrent;
+using onlab.Functions.SimpleClassifiers;
+using onlab.Functions.ThresholdFunctions;
+using onlab.SignerModel;
 using SigStat.Common;
 using SigStat.Common.Algorithms;
 using SigStat.Common.Pipeline;
-using System.Collections.Concurrent;
 
-namespace onlab.Classifier
+namespace onlab.Classifiers
 {
     internal class MyDTWClassifier : IClassifier
     {
@@ -22,8 +24,8 @@ namespace onlab.Classifier
         }
 
 
-        public required Func<IEnumerable<double>, double> ThresholdFunction { get; set; }
-        public required Func<List<double>, double, double> TestFunction { get; set; }
+        public required IThresholdFunction ThresholdFunction { get; set; }
+        public required SimpleClassifierBase SimpleClassifier { get; set; }
 
         public required Func<double[], double[], double> DistanceFunction { get; set; }
         double IClassifier.Test(ISignerModel model, Signature signature)
@@ -39,7 +41,7 @@ namespace onlab.Classifier
                double dist = GetCachedDtw(m.GenuineSignatures[i], signature, m.GenuineFeatures[i], signFeature);
                 values.Add(dist);
             }
-            double probability = TestFunction(values, m.Threshold);
+            double probability = SimpleClassifier.Decide(values, m.Threshold);
             return probability;
         
         }
@@ -63,7 +65,7 @@ namespace onlab.Classifier
 
             }
 
-            double tr = ThresholdFunction(distancesBetweenValid);
+            double tr = ThresholdFunction.CalculateThreshold(distancesBetweenValid);
 
             MyDTWSignerModel model = new MyDTWSignerModel
             {

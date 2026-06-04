@@ -38,7 +38,7 @@ namespace onlab.PlusFeatures.Transform
 
                 if (numerator ==0|| denominator == 0)
                 {
-                    results.Add(10.0); // log(R) magas értéke egyenes vonalnál
+                    results.Add(10.0); 
                 }
                 else
                 {

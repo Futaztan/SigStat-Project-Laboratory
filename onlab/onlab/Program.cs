@@ -1,7 +1,8 @@
-﻿using onlab.Functions;
-using onlab.PlusFeatures.Feature;
+﻿using onlab.Functions.EnsembleClassifiers;
+using onlab.Functions.SimpleClassifiers;
+using onlab.Functions.ThresholdFunctions;
+using onlab.Managers;
 using SigStat.Common;
-using SigStat.Common.Loaders;
 
 namespace onlab
 {
@@ -11,66 +12,73 @@ namespace onlab
         {
             ExcelManager excelManager = new();
             BenchmarkManager benchmarkManager = new();
-            //LoadSignaturesExample();
-            //UseBenchmarkExample();
-            //UseBenchMark(trainFunctions.funcs[0], testFunctions.funcs[0]);
-            //TestAllMethod();
-            //PrintToExcel();
+            TestEnsembleClassifiersAndFeatures(benchmarkManager, excelManager);
+            //TestSimpleClassifiersAndThresholdFunctions(benchmarkManager, excelManager);
+        }
 
+        private static void TestEnsembleClassifiersAndFeatures(BenchmarkManager benchmarkManager,ExcelManager excelManager)
+        {
             var featureSets = new List<List<FeatureDescriptor>>()
             {
-                // new() { Features.X, MyFeatures.ConvertedPenDown},
-                // new() { Features.Y, MyFeatures.ConvertedPenDown},
-                // new() { Features.Pressure, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.Speed, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.SpeedX, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.SpeedY, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.DeltaP, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.Acceleration, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.Sin, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.Cos, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.StrokeLengthToWidthRatio, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.LogCurvatureRadius, MyFeatures.ConvertedPenDown},
-                // new() { MyFeatures.CentroidDistance, MyFeatures.ConvertedPenDown}
-                //new() { MyFeatures.ConvertedPenDown},
-                //new() {Features.X, Features.Y, Features.Pressure, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY,
-                //MyFeatures.DeltaP,MyFeatures.Acceleration,MyFeatures.Sin,MyFeatures.Cos,MyFeatures.StrokeLengthToWidthRatio,
-                //MyFeatures.LogCurvatureRadius,MyFeatures.CentroidDistance},
                 new()
                 {
-                    Features.X, Features.Y, MyFeatures.Speed, MyFeatures.SpeedX, MyFeatures.SpeedY, Features.Pressure,
-                   MyFeatures.Sin, MyFeatures.Cos, MyFeatures.CentroidDistance,
-                    MyFeatures.ConvertedPenDown
-                },
-
+                    Features.X, Features.T
+                }
+                
+            };
+            List<SimpleClassifierBase> simpleClassifiers = new()
+            {
+                new AverageSimpleClassifier(), new HarmonicMeanSimpleClassifier(), new KNearestSimpleClassifier(),
+                new MedianSimpleClassifier(), new MinimumSimpleClassifier(),
+                new ProbabilitySimpleClassifier(), new VotingSimpleClassifier()
             };
 
-
-            DecideFunctions decideFunctions = new DecideFunctions();
-            List<DecideResult> decideResults = new List<DecideResult>();
-            foreach (var decide in decideFunctions.DecideFunctionList)
+            List<IEnsembleClassifier> ensembleClassifiers = new()
             {
-                //decideResults.Add(UseMultipleClassifier(decide));
+                new AverageEnsembleClassifier(), 
+                new GeometricMeanEnsembleClassifier(), new MedianEnsembleClassifier(),
+                new StrictEnsembleClassifier(), 
+                new VotingEnsembleClassifier()
+            };
+
+            List<Result> results = new();
+            foreach (var ensembleClassifier in ensembleClassifiers)
+            {
+                //decideResults.Add(benchmarkManager.UseMultipleClassifier(decide));
                 foreach (var feature in featureSets)
                 {
-                    decideResults.Add(benchmarkManager.UseMultipleClassifierWithPlusFeatures(decide, feature));
+                    results.Add(benchmarkManager.UseMultipleClassifierWithPlusFeatures(ensembleClassifier, feature,
+                        simpleClassifiers, new MedianThresholdFunction()));
                 }
             }
 
-            //PrintDecideToExcel(decideResults);
-            excelManager.PrintToExcelDecideAndFeature(decideResults);
+            // excelManager.PrintDecideToExcel(decideResults);
+            excelManager.PrintToExcelEnsembleClassifiersAndFeatures(results);
         }
 
-        private static void TestAllMethod(BenchmarkManager benchmarkManager)
+        private static void TestSimpleClassifiersAndThresholdFunctions(BenchmarkManager benchmarkManager,
+            ExcelManager excelManager)
         {
             List<Result> results = new List<Result>();
-            TrainFunctions trainFunctions = new TrainFunctions();
-            TestFunctions testFunctions = new TestFunctions();
-            foreach (var train in trainFunctions.TrainFunctionList)
+
+            List<IThresholdFunction> thresholdFunctions = new()
             {
-                foreach (var test in testFunctions.TestFunctionList)
+                new AverageThresholdFunction(), new DeviationThresholdFunction(), new MaximumThresholdFunction(),
+                new MedianThresholdFunction(), new PercentileThresholdFunction()
+            };
+
+            List<SimpleClassifierBase> classifiers = new()
+            {
+                new AverageSimpleClassifier(), new HarmonicMeanSimpleClassifier(), new KNearestSimpleClassifier(),
+                new MedianSimpleClassifier(), new MinimumSimpleClassifier(),
+                new ProbabilitySimpleClassifier(), new VotingSimpleClassifier()
+            };
+
+            foreach (var thresholdFunction in thresholdFunctions)
+            {
+                foreach (var classifier in classifiers)
                 {
-                    results = benchmarkManager.TrainAndTestFunctions(train, test);
+                    results.Add(benchmarkManager.TrainAndTestFunctions(thresholdFunction, classifier));
                 }
             }
 
@@ -79,48 +87,7 @@ namespace onlab
                 result.Print();
             }
 
-            results = results.OrderBy(o => o.AER).ToList();
-            Console.WriteLine("Legjobb AER: ");
-            results[0].Print();
-            Console.WriteLine("Legjobb FAR aztán FRR: ");
-            results = results.OrderBy(o => o.FAR).ThenBy(o => o.FRR).ToList();
-            results[0].Print();
-            Console.WriteLine("Legjobb FRR aztán FAR: ");
-            results = results.OrderBy(o => o.FRR).ThenBy(o => o.FAR).ToList();
-            results[0].Print();
-        }
-
-        private static void LoadSignaturesExample()
-        {
-            // Console.WriteLine("Add meg az adatbázis helyét! (pl. C:/Work/Temalabor/SVC2004.zip");
-            //var path = Console.ReadLine();
-            var path = @"C:\Users\David\Downloads\MCYT100.zip";
-            MCYTLoader loader = new MCYTLoader(path, true);
-            var signers = new List<Signer>(loader.EnumerateSigners());
-
-            var signaturesOfUser1 = signers[0].Signatures;
-            for (int i = 0; i < signers.Count; i++)
-            {
-                Console.WriteLine(signers[i].Signatures.Count);
-            }
-
-            var signature = signaturesOfUser1[0];
-
-            Console.WriteLine($"A(z) {signature.Signer.ID}. aláíró {signature.ID}. aláírása:");
-            Console.WriteLine("X \t Y \t P \t T");
-
-            var id = signature.ID;
-            var x = signature.GetFeature(Features.X);
-            var y = signature.GetFeature(Features.Y);
-            var t = signature.GetFeature(Features.T);
-            var p = signature.GetFeature(Features.Pressure);
-
-            for (int i = 0; i < x.Count; i++)
-            {
-                Console.WriteLine($"{x[i]} \t {y[i]} \t {p[i]} \t {t[i]}");
-            }
-
-            Console.ReadKey();
+            excelManager.PrintToExcelSimpleClassifierAndThresholdFunction(results);
         }
     }
 }
